@@ -1,0 +1,4 @@
+>>> Warning 204 "piccore.c" Line 32(1,1): Condition always FALSE
+>>> Warning 202 "piccore.c" Line 19(9,13): Variable never used:   Rval
+      Memory usage:   ROM=57%      RAM=45% - 59%
+      0 Errors,  2 Warnings.

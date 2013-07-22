@@ -1,0 +1,67 @@
+[Opened Files]
+1=piccore.c
+2=pic.h
+3=C:\Program Files\PICC\devices\16F1824.h
+4=
+5=
+[PROJECT]
+Processor_Text=PIC16F1824
+Processor=0x1824
+Target=piccore.hex
+Development_Mode=
+ToolSuite=CCS
+[Documentation]
+Count=3
+1=Z:\Designs\PIR\900MHZ Module\SPI_CODE\piccore.c
+1T=piccore.c
+1E=
+1W=0
+2=Z:\Designs\PIR\900MHZ Module\SPI_CODE\pic.h
+2T=pic.h
+2E=
+2W=0
+3=Z:\Designs\PIR\900MHZ Module\SPI_CODE\16F1824.h
+3T=16F1824.h
+3E=
+3W=0
+[Directories]
+Include=
+Library=
+LinkerScript=
+[defines]
+enabled=0
+D1=
+V1=
+[fileformats]
+forcecoff=0
+debug=4
+error=2
+object=0
+list=0
+scratch=0
+sta=1
+tre=1
+allerrors=1
+allwarnings=1
+stayupne=3
+stayupoe=0
+[Target Data]
+BuildTool=C-COMPILER
+OptionString=+FM
+AdditionalOptionString=
+BuildRequired=1
+FileList=E:\SPI_CODE\piccore.c
+[piccore.c]
+Type=4
+Path=
+FileList=
+BuildTool=
+OptionString=
+AdditionalOptionString=
+[mru-list]
+1=piccore.c
+[Windows]
+0=0000 %S 0 0 796 451 3 0
+[Units]
+Count=1
+1=piccore (main)

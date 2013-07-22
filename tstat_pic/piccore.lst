@@ -1,0 +1,2152 @@
+CCS PCM C Compiler, Version 4.128, 64281               07-ÁùÔÂ-13 16:55
+
+               Filename: D:\spi\piccore.lst
+
+               ROM used: 1174 words (57%)
+                         Largest free fragment is 874
+               RAM used: 61 (45%) at main() level
+                         80 (59%) worst case
+               Stack:    3 locations
+
+*
+0000:  MOVLW  03
+0001:  MOVWF  0A
+0002:  GOTO   3E9
+0003:  NOP
+....................  
+.................... //REV 3_1 is used for 16f882, i2c potocol is 16 bits,and change I2C  potocal to fit hum and clock function 
+.................... //REV 3 is used for 16f882, i2c potocol is 10 bits 
+....................  
+.................... //REV 2_1 is used for 16f722, i2c potocol is 16 bits 
+.................... //REV 2 is used for 16f722, i2c potocol is 10 bits 
+....................  
+....................  
+....................  
+....................  
+.................... #include "pic.h" 
+.................... //#include <16F722.h> 
+.................... //#device adc = 8 // use 8-bit ADC 
+.................... #include <16F882.h> 
+.................... //////// Standard Header file for the PIC16F882 device //////////////// 
+.................... #device PIC16F882 
+.................... #list 
+....................  
+.................... #device adc = 10 // use 8-bit ADC 
+.................... #fuses INTRC_IO,NOWDT,NOPROTECT,NOMCLR//BORV21//,NOBROWNOUT //PUT ,BROWNOUT,Internal RC Osci, Watchdog, No Protect, No Memory Clear; 
+.................... #BUILD(nosleep) 
+.................... #use delay(clock = 8000000)  //Adjusts the accuracy of the delay functions 
+0004:  MOVLW  61
+0005:  MOVWF  04
+0006:  BCF    03.7
+0007:  MOVF   00,W
+0008:  BTFSC  03.2
+0009:  GOTO   017
+000A:  MOVLW  02
+000B:  MOVWF  78
+000C:  CLRF   77
+000D:  DECFSZ 77,F
+000E:  GOTO   00D
+000F:  DECFSZ 78,F
+0010:  GOTO   00C
+0011:  MOVLW  97
+0012:  MOVWF  77
+0013:  DECFSZ 77,F
+0014:  GOTO   013
+0015:  DECFSZ 00,F
+0016:  GOTO   00A
+0017:  RETURN
+.................... #use standard_io(A) 
+.................... #use standard_io(c) 
+.................... //#use fast_io(b) 
+.................... //#use fast_io(c) 
+.................... #if 0 
+.................... #define PWM_H  5 
+.................... #define TOTAL_PWM_DUTY  10 
+.................... #define TIMER2_POSTSCALE   1 
+.................... #define TIMER2_START_VALUE  198 
+.................... #define TIMER2_PERIOD   200  
+....................  
+.................... #define PIC_VERSION     20 // 19 and up- extra byte 0x88 for set relay 
+.................... //rev 20 SDA pin changed, also add extra check byte 
+.................... /* 
+.................... #define CPURESET        PIN_C4//used for main CPU reset  
+.................... #define SCL             PIN_C3  //used for I2C CLOCK 
+.................... #define SDA             PIN_B7  //used for I2C DATA 
+.................... #define RELAY1          PIN_C0 
+.................... #define RELAY2          PIN_C1 
+.................... #define RELAY3          PIN_C2 
+.................... #define RELAY4          PIN_C5 
+.................... #define RELAY5          PIN_C6 
+....................  
+.................... #define TEM_SENSOR      PIN_B0  
+....................  
+.................... #define back_light      PIN_A7 
+....................  
+.................... #define AI1             PIN_A0  
+.................... #define AI2             PIN_A1 
+.................... #define AI3             PIN_A2 
+.................... #define AI4             PIN_A5 
+.................... #define AI5             PIN_B2 
+.................... #define AI6             PIN_B3 
+.................... #define AI7             PIN_B1 
+.................... #define AI8             PIN_B4 
+....................  
+....................   
+.................... #define test            PIN_A4 
+.................... #define CHANGE            1 
+.................... #define NOT_CHANGE        0 
+.................... */ 
+.................... #define HIGH_START 400 // set so that it jumps at every second relatively 
+.................... // the calibration of SERIAL_TIMEOUT_SECONDS is about 1 = 1.2seconds 
+.................... // if set to 250, delay about 5 mins 
+.................... #define SERIAL_TIMEOUT_SECONDS  4000//250 
+....................  
+.................... #define avg  49 //polling times between twice comunications ,it can up to 999,not test for after 999 
+....................  
+....................  
+.................... int8 i2c_byte; 
+.................... int1 serial_receive_watchdog ; 
+.................... unsigned char serial_receive_timeout; 
+.................... unsigned int16 high_count ; 
+.................... unsigned int32 data_core; 
+.................... unsigned int16 sampling_counter; 
+....................  
+.................... unsigned int16 analog_input_data[16]; 
+....................  
+.................... int1 com_int_flag = 0; 
+....................  
+.................... int8 i2c_address; 
+.................... //unsigned int16 analog_in[8]; 
+....................  
+.................... int1 t_flag; 
+.................... //unsigned int8 relay_duty; 
+.................... //unsigned int16 heartbeat; 
+.................... unsigned int8 relay_status; //indicator relay statue,open or close 
+.................... int1 status_relay1 = 0; 
+.................... int1 status_relay2 = 0; 
+.................... int1 status_relay3 = 0; 
+.................... int1 status_relay4 = 0; 
+.................... int1 status_relay5 = 0; 
+.................... int1 lcd_backlight; 
+....................  
+.................... int1 status_relay1_buff = 0; 
+.................... int1 status_relay2_buff = 0; 
+.................... int1 status_relay3_buff = 0; 
+.................... int1 status_relay4_buff = 0; 
+.................... int1 status_relay5_buff = 0; 
+....................  
+.................... int8 pwm_duty_couter = 0; 
+....................  
+....................  
+.................... int8 relay_status_buff = 0; 
+.................... int1 relay_change_flag = CHANGE; //0:not need change 1: need c 
+.................... int8 relay_on_off_counter = 0; 
+....................  
+....................  
+....................  
+.................... void i2c_write_version(); 
+.................... short i2c_get_ack(); 
+.................... void i2c_give_ack(); 
+.................... void i2c_write( unsigned long ch ); 
+.................... unsigned char i2c_read(); 
+.................... void poll_i2c_bus(); 
+.................... void i2c_write_data(); 
+.................... void refresh_relay(); 
+.................... void set_relay(); 
+.................... void i2c_write_relay(); 
+.................... unsigned int16 filter_reading( ); 
+....................  
+.................... void read_analog_input(int ix); 
+....................  
+.................... #endif 
+.................... /******************************************************************************* 
+....................  SPI 
+....................  */ 
+....................  void initial(void); 
+.................... void SPI_write_data( BYTE Regaddr, BYTE Dvalue ); 
+.................... BYTE SPI_read_data( BYTE Regaddr ); 
+.................... void SPI_initial( void ); 
+.................... void SPI_write_strobe( BYTE strobe ); 
+.................... void SPI_powerup_reset( void ); 
+.................... void SPI_reset_cc11( void ); 
+.................... void SPI_config( void ); 
+.................... BYTE SPI_read_status( BYTE Regaddr ); 
+.................... void SPI_write_burst(BYTE Regaddr, BYTE *Wbuf, BYTE count); 
+.................... void SPI_read_burst(BYTE Regaddr, BYTE *Rbuf, BYTE count); 
+....................  
+.................... //BYTE Read_packet( BYTE *Rbuffer, BYTE *count ); 
+.................... unsigned char Read_packet( unsigned char *Rbuffer, unsigned char *count ); 
+.................... void Write_packet( BYTE *Wbuffer, BYTE size ); 
+.................... void writeRfSettings( void); 
+....................  
+.................... #define GDO0         PIN_C6 
+.................... #define SPI_CS       PIN_C2 
+.................... #define SPI_CLK      PIN_C0 
+.................... #define SPI_MOSI     PIN_C1 
+.................... #define SPI_MISO     PIN_C5 
+....................  
+.................... #define LED_RED        PIN_A1 
+.................... #define LED_GREEN      PIN_A0 
+....................  
+.................... /* 
+....................  
+.................... #define GDO0         PIN_C1 
+.................... #define SPI_CS       PIN_C2 
+.................... #define SPI_CLK      PIN_C3 
+.................... #define SPI_MOSI     PIN_C5 
+.................... #define SPI_MISO     PIN_C4 
+....................  
+.................... #define LED_RED        PIN_A1 
+.................... #define LED_GREEN      PIN_A0 
+.................... */ 
+.................... //#define FREQ_915M 
+....................  
+.................... #define DATA_LEN 8 
+....................  
+....................  
+.................... BYTE Rbuffer[ DATA_LEN ] = {0}; 
+*
+0403:  BCF    03.6
+0404:  CLRF   21
+0405:  CLRF   22
+0406:  CLRF   23
+0407:  CLRF   24
+0408:  CLRF   25
+0409:  CLRF   26
+040A:  CLRF   27
+040B:  CLRF   28
+.................... BYTE Wbuffer[ 2 ] = {0xaa,0x55}; 
+040C:  MOVLW  AA
+040D:  MOVWF  29
+040E:  MOVLW  55
+040F:  MOVWF  2A
+.................... BYTE PA_config[8] = {0xC0,0xC0,0xC0,0xC0,0xC0,0xC0,0xC0,0xC0}; 
+0410:  MOVLW  C0
+0411:  MOVWF  2B
+0412:  MOVWF  2C
+0413:  MOVWF  2D
+0414:  MOVWF  2E
+0415:  MOVWF  2F
+0416:  MOVWF  30
+0417:  MOVWF  31
+0418:  MOVWF  32
+....................  
+.................... typedef struct S_RF_SETTINGS{ 
+....................     BYTE sFSCTRL1;   // Frequency synthesizer control. 
+....................     BYTE sFSCTRL0;   // Frequency synthesizer control. 
+....................     BYTE sFREQ2;     // Frequency control word, high byte. 
+....................     BYTE sFREQ1;     // Frequency control word, middle byte. 
+....................     BYTE sFREQ0;     // Frequency control word, low byte. 
+....................     BYTE sMDMCFG4;   // Modem configuration. 
+....................     BYTE sMDMCFG3;   // Modem configuration. 
+....................     BYTE sMDMCFG2;   // Modem configuration. 
+....................     BYTE sMDMCFG1;   // Modem configuration. 
+....................     BYTE sMDMCFG0;   // Modem configuration. 
+....................     BYTE sCHANNR;    // Channel number. 
+....................     BYTE sDEVIATN;   // Modem deviation setting (when FSK modulation is enabled). 
+....................     BYTE sFREND1;    // Front end RX configuration. 
+....................     BYTE sFREND0;    // Front end RX configuration. 
+....................     BYTE sMCSM0;     // Main Radio Control State Machine configuration. 
+....................     BYTE sFOCCFG;    // Frequency Offset Compensation Configuration. 
+....................     BYTE sBSCFG;     // Bit synchronization Configuration. 
+....................     BYTE sAGCCTRL2;  // AGC control. 
+....................    BYTE sAGCCTRL1;  // AGC control. 
+....................     BYTE sAGCCTRL0;  // AGC control. 
+....................     BYTE sFSCAL3;    // Frequency synthesizer calibration. 
+....................     BYTE sFSCAL2;    // Frequency synthesizer calibration. 
+....................    BYTE sFSCAL1;    // Frequency synthesizer calibration. 
+....................     BYTE sFSCAL0;    // Frequency synthesizer calibration. 
+....................     BYTE sFSTEST;    // Frequency synthesizer calibration control 
+....................     BYTE sTEST2;     // Various test settings. 
+....................     BYTE sTEST1;     // Various test settings. 
+....................     BYTE sTEST0;     // Various test settings. 
+....................     BYTE sFIFOTHR;   // RXFIFO and TXFIFO thresholds. 
+....................     BYTE sIOCFG2;    // GDO2 output pin configuration 
+....................     BYTE sIOCFG0;    // GDO0 output pin configuration 
+....................     BYTE sPKTCTRL1;  // Packet automation control. 
+....................     BYTE sPKTCTRL0;  // Packet automation control. 
+....................     BYTE sADDR;      // Device address. 
+....................     BYTE sPKTLEN;    // Packet length. 
+.................... } RF_SETTINGS; 
+....................  
+.................... //#ifdef FREQ_915M 
+.................... // 915m 
+.................... RF_SETTINGS rfSettings = { 
+....................     0x0C,   // FSCTRL1   Frequency synthesizer control. 
+....................     0x00,   // FSCTRL0   Frequency synthesizer control. 
+....................     0x23,   // FREQ2     Frequency control word, high byte. 
+....................     0x31,   // FREQ1     Frequency control word, middle byte. 
+....................     0x3B,   // FREQ0     Frequency control word, low byte. 
+....................     0x2D,   // MDMCFG4   Modem configuration. 
+....................     0x3B,   // MDMCFG3   Modem configuration. 
+....................     0x13,   // MDMCFG2   Modem configuration. 
+....................     0x22,   // MDMCFG1   Modem configuration. 
+....................     0xF8,   // MDMCFG0   Modem configuration. 
+....................     0x00,   // CHANNR    Channel number. 
+....................     0x62,   // DEVIATN   Modem deviation setting (when FSK modulation is enabled). 
+....................     0xB6,   // FREND1    Front end RX configuration. 
+....................     0x10,   // FREND0    Front end TX configuration. 
+....................     0x18,   // MCSM0     Main Radio Control State Machine configuration. 
+....................     0x1D,   // FOCCFG    Frequency Offset Compensation Configuration. 
+....................     0x1C,   // BSCFG     Bit synchronization Configuration. 
+....................     0xC7,   // AGCCTRL2  AGC control. 
+....................     0x00,   // AGCCTRL1  AGC control. 
+....................     0xB0,   // AGCCTRL0  AGC control. 
+....................     0xEA,   // FSCAL3    Frequency synthesizer calibration. 
+....................     0x2A,   // FSCAL2    Frequency synthesizer calibration. 
+....................     0x00,   // FSCAL1    Frequency synthesizer calibration. 
+....................     0x1F,   // FSCAL0    Frequency synthesizer calibration. 
+....................     0x59,   // FSTEST    Frequency synthesizer calibration. 
+....................     0x88,   // TEST2     Various test settings. 
+....................     0x31,   // TEST1     Various test settings. 
+....................     0x09,   // TEST0     Various test settings. 
+....................     0x07,   // FIFOTHR   RXFIFO and TXFIFO thresholds. 
+....................     0x29,   // IOCFG2    GDO2 output pin configuration. 
+....................     0x06,   // IOCFG0D   GDO0 output pin configuration. Refer to SmartRF® Studio User Manual for detailed pseudo register explanation. 
+....................     0x04,   // PKTCTRL1  Packet automation control. 
+....................     0x05,   // PKTCTRL0  Packet automation control. 
+....................     0x00,   // ADDR      Device address. 
+....................     0xFF    // PKTLEN    Packet length. 
+.................... };  
+0419:  MOVLW  0C
+041A:  MOVWF  33
+041B:  CLRF   34
+041C:  MOVLW  23
+041D:  MOVWF  35
+041E:  MOVLW  31
+041F:  MOVWF  36
+0420:  MOVLW  3B
+0421:  MOVWF  37
+0422:  MOVLW  2D
+0423:  MOVWF  38
+0424:  MOVLW  3B
+0425:  MOVWF  39
+0426:  MOVLW  13
+0427:  MOVWF  3A
+0428:  MOVLW  22
+0429:  MOVWF  3B
+042A:  MOVLW  F8
+042B:  MOVWF  3C
+042C:  CLRF   3D
+042D:  MOVLW  62
+042E:  MOVWF  3E
+042F:  MOVLW  B6
+0430:  MOVWF  3F
+0431:  MOVLW  10
+0432:  MOVWF  40
+0433:  MOVLW  18
+0434:  MOVWF  41
+0435:  MOVLW  1D
+0436:  MOVWF  42
+0437:  MOVLW  1C
+0438:  MOVWF  43
+0439:  MOVLW  C7
+043A:  MOVWF  44
+043B:  CLRF   45
+043C:  MOVLW  B0
+043D:  MOVWF  46
+043E:  MOVLW  EA
+043F:  MOVWF  47
+0440:  MOVLW  2A
+0441:  MOVWF  48
+0442:  CLRF   49
+0443:  MOVLW  1F
+0444:  MOVWF  4A
+0445:  MOVLW  59
+0446:  MOVWF  4B
+0447:  MOVLW  88
+0448:  MOVWF  4C
+0449:  MOVLW  31
+044A:  MOVWF  4D
+044B:  MOVLW  09
+044C:  MOVWF  4E
+044D:  MOVLW  07
+044E:  MOVWF  4F
+044F:  MOVLW  29
+0450:  MOVWF  50
+0451:  MOVLW  06
+0452:  MOVWF  51
+0453:  MOVLW  04
+0454:  MOVWF  52
+0455:  MOVLW  05
+0456:  MOVWF  53
+0457:  CLRF   54
+0458:  MOVLW  FF
+0459:  MOVWF  55
+.................... //#endif 
+....................  
+.................... //define the register 
+.................... #define IOCFG2    0x00 
+.................... #define IOCFG1    0x01 
+.................... #define IOCFG0    0x02 
+.................... #define FIFOTHR   0x03 
+.................... #define SYNC1     0x04 
+.................... #define SYNC0     0x05 
+.................... #define PKTLEN    0x06 
+.................... #define PKTCTRL1  0x07 
+.................... #define PKTCTRL0  0x08 
+.................... #define ADDR      0x09 
+.................... #define CHANNR    0x0A 
+.................... #define FSCTRL1   0x0B 
+.................... #define FSCTRL0   0x0C 
+.................... #define FREQ2     0x0D 
+.................... #define FREQ1     0x0E 
+.................... #define FREQ0     0x0F 
+.................... #define MDMCFG4   0x10 
+.................... #define MDMCFG3   0x11 
+.................... #define MDMCFG2   0x12 
+.................... #define MDMCFG1   0x13 
+.................... #define MDMCFG0   0x14 
+.................... #define DEVIATN   0x15 
+.................... #define MCSM2     0x16 
+.................... #define MCSM1     0x17 
+.................... #define MCSM0     0x18 
+.................... #define FOCCFG    0x19 
+.................... #define BSCFG     0x1A 
+.................... #define AGCCTRL2  0x1B 
+.................... #define AGCCTRL1  0x1C 
+.................... #define AGCCTRL0  0x1D 
+.................... #define WORREVT1  0x1E 
+.................... #define WORREVT0  0x1F 
+.................... #define WORCTRL   0x20 
+.................... #define FREND1    0x21 
+.................... #define FREND0    0x22 
+.................... #define FSCAL3    0x23 
+.................... #define FSCAL2    0x24 
+.................... #define FSCAL1    0x25 
+.................... #define FSCAL0    0x26 
+.................... #define RCCTRL1   0x27 
+.................... #define RCCTRL0   0x28 
+.................... #define FSTEST    0x29 
+.................... #define PTEST     0x2A 
+.................... #define AGCTEST   0x2B 
+.................... #define TEST2     0x2C 
+.................... #define TEST1     0x2D 
+.................... #define TEST0     0x2E 
+....................  
+.................... #define SRES      0x30 
+.................... #define SFSTXON   0x31 
+.................... #define SXOFF     0x32 
+.................... #define SCAL      0x33 
+.................... #define SRX       0x34 
+.................... #define STX       0x35 
+.................... #define SIDLE     0x36 
+.................... #define SAFC      0x37 
+.................... #define SWOR      0x38 
+.................... #define SPWD      0x39 
+.................... #define SFRX      0x3A 
+.................... #define SFTX      0x3B 
+.................... #define SWORRST   0x3C 
+.................... #define SNOP      0x3D 
+....................  
+.................... #define PARTNUM   0x30 
+.................... #define VERSION   0x31 
+.................... #define FREQEST   0x32 
+.................... #define LQI       0x33 
+.................... #define RSSI      0x34 
+.................... #define MARCSTATE 0x35 
+.................... #define WORTIME1  0x36 
+.................... #define WORTIME0  0x37 
+.................... #define PKTSTATUS 0x38 
+.................... #define VCO_VC_DAC  0x39 
+.................... #define TXBYTES   0x3A 
+.................... #define RXBYTES   0x3B 
+.................... #define PATABLE   0x3E 
+.................... #define TX_FIFO   0x3F 
+.................... #define RX_FIFO   0x3F 
+....................  
+.................... #ignore_warnings 203 
+....................  
+....................  
+.................... void writeRfSettings( RF_SETTINGS *pRfSettings); 
+.................... ////////////////////////////// 
+.................... void main(void) 
+.................... { 
+*
+03E9:  CLRF   04
+03EA:  BCF    03.7
+03EB:  MOVLW  1F
+03EC:  ANDWF  03,F
+03ED:  MOVLW  71
+03EE:  BSF    03.5
+03EF:  MOVWF  0F
+03F0:  MOVF   0F,W
+03F1:  MOVLW  FF
+03F2:  BCF    03.5
+03F3:  MOVWF  20
+03F4:  BSF    03.5
+03F5:  BSF    03.6
+03F6:  MOVF   09,W
+03F7:  ANDLW  C0
+03F8:  MOVWF  09
+03F9:  BCF    03.6
+03FA:  BCF    1F.4
+03FB:  BCF    1F.5
+03FC:  MOVLW  00
+03FD:  BSF    03.6
+03FE:  MOVWF  08
+03FF:  BCF    03.5
+0400:  CLRF   07
+0401:  CLRF   08
+0402:  CLRF   09
+....................    BYTE Rval; 
+....................    BYTE read_count ; 
+....................    initial();  
+*
+045A:  GOTO   074
+....................    delay_ms(10); 
+045B:  MOVLW  0A
+045C:  MOVWF  61
+045D:  CALL   004
+....................    int8 leng = 0; 
+045E:  CLRF   58
+....................     
+....................  //  setup_wdt( WDT_2304MS); 
+....................     
+....................    while(1) 
+....................    { 
+....................       #if 1 
+....................      //write the data into the FIFO buffer  
+....................      if( 0 )//WR_flg ) 
+....................      { 
+....................       output_high( LED_GREEN ); 
+....................    //   output_high( LED_RED ); 
+....................         delay_ms( 30 );  
+....................       leng = 2; 
+....................       Write_packet( Wbuffer, leng ); 
+....................       output_low( LED_GREEN ); 
+....................       delay_ms( 30 ); 
+....................       } 
+....................      
+....................      else    //read the data from the FIFO buffer 
+....................      {   
+....................       read_count = 2; 
+045F:  MOVLW  02
+0460:  MOVWF  57
+....................   //    output_high( LED_RED );//delay_ms( 100 ); 
+....................          if( Read_packet(Rbuffer, &read_count))//sizeof( Rbuffer ))) 
+0461:  CLRF   5A
+0462:  MOVLW  21
+0463:  MOVWF  59
+0464:  CLRF   5C
+0465:  MOVLW  57
+0466:  MOVWF  5B
+0467:  GOTO   352
+0468:  MOVF   78,F
+0469:  BTFSC  03.2
+046A:  GOTO   491
+....................          { 
+....................         //     restart_wdt(); 
+....................       //     output_high( LED_GREEN );delay_ms( 30 );  output_low( LED_GREEN );//delay_ms( 100 ); 
+....................       //      for(recv_count = 0; recv_count < 8; recv_count++ ) 
+....................        //     { 
+....................                if( Rbuffer[0] == 0xaa ) 
+046B:  MOVF   21,W
+046C:  SUBLW  AA
+046D:  BTFSS  03.2
+046E:  GOTO   47B
+....................                { 
+....................                   output_high( LED_GREEN ); 
+046F:  BSF    03.5
+0470:  BCF    05.0
+0471:  BCF    03.5
+0472:  BSF    05.0
+....................                   delay_ms( 200 ); 
+0473:  MOVLW  C8
+0474:  MOVWF  61
+0475:  CALL   004
+....................                   output_low( LED_GREEN ); 
+0476:  BSF    03.5
+0477:  BCF    05.0
+0478:  BCF    03.5
+0479:  BCF    05.0
+....................              //     delay_ms( 200 ); 
+....................                   Rbuffer[0] = 0; 
+047A:  CLRF   21
+....................                } 
+....................                if(Rbuffer[1] == 0x55) 
+047B:  MOVF   22,W
+047C:  SUBLW  55
+047D:  BTFSS  03.2
+047E:  GOTO   48C
+....................                 { 
+....................                   output_high( LED_RED ); 
+047F:  BSF    03.5
+0480:  BCF    05.1
+0481:  BCF    03.5
+0482:  BSF    05.1
+....................                   delay_ms( 200 ); 
+0483:  MOVLW  C8
+0484:  MOVWF  61
+0485:  CALL   004
+....................                   output_low( LED_RED ); 
+0486:  BSF    03.5
+0487:  BCF    05.1
+0488:  BCF    03.5
+0489:  BCF    05.1
+....................               //    delay_ms( 200 ); 
+....................                   Rbuffer[1] = 0; 
+048A:  CLRF   22
+....................                } 
+....................                else 
+048B:  GOTO   490
+....................                {                                                         
+....................              //     output_high( LED_RED ); 
+....................                   output_low( LED_GREEN ); 
+048C:  BSF    03.5
+048D:  BCF    05.0
+048E:  BCF    03.5
+048F:  BCF    05.0
+....................                } 
+....................             } 
+....................             else 
+0490:  GOTO   495
+....................             { 
+....................                output_low( LED_RED ); 
+0491:  BSF    03.5
+0492:  BCF    05.1
+0493:  BCF    03.5
+0494:  BCF    05.1
+....................             } 
+....................           //  delay_ms( 100 );    
+....................           //  output_low( LED_RED ); 
+....................       //   }       
+....................      } 
+....................    #endif 
+....................    #if 0 
+....................   //    output_high( LED_RED ); 
+....................   //    output_high( LED_GREEN ); 
+....................       SPI_write_data( CHANNR, 0x04 ); 
+....................    //   SPI_write_burst( ADDR,Wbuffer,4 ); 
+....................    //    delay_us(2); 
+....................        Rval = SPI_read_data( CHANNR ); 
+....................    //   SPI_read_burst( ADDR,Rbuffer,4 ); 
+....................     //  SPI_end(); 
+....................        delay_us( 2 ); 
+....................  
+....................       if( Rval == 0x04 ) 
+....................       { 
+....................          output_low( LED_GREEN ); 
+....................    //      output_low( LED_RED ); 
+....................         // delay_us( 100 ); 
+....................   //       delay_ms( 30 ); 
+....................          output_high( LED_GREEN ); 
+....................     //     output_high( LED_RED ); 
+....................        //  delay_us( 100 ); 
+.................... //         delay_ms( 30 ); 
+....................          Rval = 0; 
+....................       } 
+....................       if( Rval == 0x00 ) 
+....................       { 
+....................         output_low( LED_RED ); 
+....................         // delay_us( 100 ); 
+....................         delay_ms( 30 ); 
+....................          output_high( LED_RED ); 
+....................        //  delay_us( 100 ); 
+....................          delay_ms( 30 ); 
+....................          Rval = 0; 
+....................       } 
+....................       else 
+....................       { 
+....................       //   delay_ms( 1000 ); 
+....................          output_low( LED_GREEN ); 
+....................          output_low( LED_RED ); 
+....................       //   delay_ms( 1000 ); 
+....................       } 
+....................    #endif 
+....................    } 
+0495:  GOTO   45F
+.................... } 
+....................  
+.................... void initial(void) 
+.................... { 
+....................   setup_oscillator(OSC_8MHZ); 
+*
+0074:  MOVLW  71
+0075:  BSF    03.5
+0076:  MOVWF  0F
+0077:  MOVF   0F,W
+.................... //  SETUP_TIMER_0 (T0_DIV_4) ; 
+....................   SETUP_TIMER_1( T1_INTERNAL | T1_DIV_BY_8 ); 
+0078:  MOVLW  35
+0079:  BCF    03.5
+007A:  MOVWF  10
+....................    SET_TIMER1(0);//about 524ms overflow 
+007B:  CLRF   0F
+007C:  CLRF   0E
+....................    
+.................... // SETUP_ADC (ADC_CLOCK_DIV_32) ; 
+.................... //  SETUP_ADC_PORTS (VSS_VDD) ; 
+....................    
+....................   set_tris_c (0x60); //set up  bit5 ,bit1 of c port input 10/12 
+007D:  MOVLW  60
+007E:  BSF    03.5
+007F:  MOVWF  07
+0080:  BCF    03.5
+0081:  MOVWF  20
+.................... //  set_tris_a (0x20); //set up  bit5 of a port input 
+....................     
+.................... //  set_tris_c (0x44); 
+....................   SPI_initial(); 
+....................  
+.................... //  output_high( LED_GREEN); 
+.................... /* 
+....................   // Port Directions 
+....................   set_tris_b(0xff); 
+....................   set_tris_c(0x88); 
+....................  
+....................  
+....................   output_high(CPURESET);  
+....................  
+....................  
+....................   SETUP_ADC_PORTS(sAN12); 
+....................   SETUP_ADC_PORTS(sAN0); 
+....................   SETUP_ADC_PORTS(sAN1); 
+....................   SETUP_ADC_PORTS(sAN2); 
+....................   SETUP_ADC_PORTS(sAN4); 
+....................   SETUP_ADC_PORTS(sAN8); 
+....................   SETUP_ADC_PORTS(sAN9); 
+....................   SETUP_ADC_PORTS(sAN10); 
+....................   SETUP_ADC_PORTS(sAN11); 
+....................  
+....................   SETUP_ADC_PORTS(VSS_VREF); //using VREF for adc intput referenece 
+....................   SETUP_ADC(ADC_CLOCK_DIV_8);//SETUP ADC CLOCK SOURCE   
+....................   // set_adc_channel(12);        
+....................  
+....................   // SETUP_TIMER_1( T1_INTERNAL | T1_DIV_BY_8 ); 
+....................   // SET_TIMER1(0);//about 524ms overflow 
+....................  
+....................   input(TEM_SENSOR); 
+....................   input(AI1); 
+....................   input(AI2); 
+....................   input(AI3); 
+....................   input(AI4); 
+....................   input(AI5); 
+....................   input(AI6); 
+....................   input(AI7); 
+....................   input(AI8); 
+....................  
+....................   ENABLE_INTERRUPTS(GLOBAL); 
+....................   ENABLE_INTERRUPTS(INT_RB7);   // int for I2C 
+....................  
+....................   high_count = HIGH_START; 
+....................   serial_receive_watchdog = 0; 
+....................   serial_receive_timeout = SERIAL_TIMEOUT_SECONDS; 
+....................   delay_ms(100); 
+....................   output_low(CPURESET); 
+.................... */ 
+.................... } 
+*
+02CF:  GOTO   45B (RETURN)
+....................  
+....................  
+....................  
+.................... /******************************************************************************************* 
+....................  SPI 
+....................  */ 
+....................  //SPI initial 
+.................... void SPI_initial( void ) 
+.................... { 
+....................     
+....................    output_high(SPI_CLK); //make the clk and mosi equal to 0  
+*
+0082:  BCF    20.0
+0083:  MOVF   20,W
+0084:  BSF    03.5
+0085:  MOVWF  07
+0086:  BCF    03.5
+0087:  BSF    07.0
+....................    output_low(SPI_MOSI); 
+0088:  BCF    20.1
+0089:  MOVF   20,W
+008A:  BSF    03.5
+008B:  MOVWF  07
+008C:  BCF    03.5
+008D:  BCF    07.1
+....................    output_high(SPI_CS);// = 1; 
+008E:  BCF    20.2
+008F:  MOVF   20,W
+0090:  BSF    03.5
+0091:  MOVWF  07
+0092:  BCF    03.5
+0093:  BSF    07.2
+....................    delay_ms( 5 ); 
+0094:  MOVLW  05
+0095:  MOVWF  61
+0096:  CALL   004
+....................     
+.................... //   setup_spi( SPI_MASTER| SPI_L_TO_H| SPI_CLK_DIV_16 | SPI_XMIT_L_TO_H | SPI_SAMPLE_AT_END); 
+....................     
+....................     
+....................    SPI_powerup_reset(); 
+....................    delay_us( 1 ); 
+*
+00C0:  GOTO   0C1
+....................    writeRfSettings( &rfSettings); 
+00C1:  CLRF   5A
+00C2:  MOVLW  33
+00C3:  MOVWF  59
+....................    SPI_write_burst(PATABLE,PA_config,8);//here config the patable register, we choose the 0xc0 
+*
+0289:  MOVLW  3E
+028A:  MOVWF  59
+028B:  CLRF   5B
+028C:  MOVLW  2B
+028D:  MOVWF  5A
+028E:  MOVLW  08
+028F:  MOVWF  5C
+....................    output_low(SPI_CLK);// = 0; 
+*
+02BD:  BCF    20.0
+02BE:  MOVF   20,W
+02BF:  BSF    03.5
+02C0:  MOVWF  07
+02C1:  BCF    03.5
+02C2:  BCF    07.0
+....................    SPI_write_strobe( SIDLE ); 
+02C3:  MOVLW  36
+02C4:  MOVWF  61
+02C5:  CALL   05C
+....................    SPI_write_strobe( SCAL ); 
+02C6:  MOVLW  33
+02C7:  MOVWF  61
+02C8:  CALL   05C
+....................  //  SPI_write_strobe( SFRX ); 
+....................    output_high(SPI_MISO);//SPI_MISO = 1; 
+02C9:  BCF    20.5
+02CA:  MOVF   20,W
+02CB:  BSF    03.5
+02CC:  MOVWF  07
+02CD:  BCF    03.5
+02CE:  BSF    07.5
+....................   // delay_us( 1 );    
+....................   // output_low(SPI_CS);// = 0; 
+.................... } 
+....................  
+.................... //SPI Write data func 
+.................... void SPI_write_byte( int8 Wdata ) 
+.................... { 
+....................    unsigned int8 i; 
+....................    for( i=0; i<8; i++ ) 
+*
+0018:  CLRF   68
+0019:  MOVF   68,W
+001A:  SUBLW  07
+001B:  BTFSS  03.0
+001C:  GOTO   03E
+....................    { 
+....................       if( Wdata & 0x80 ) 
+001D:  BTFSS  67.7
+001E:  GOTO   026
+....................          output_high(SPI_MOSI);// = 1; 
+001F:  BCF    20.1
+0020:  MOVF   20,W
+0021:  BSF    03.5
+0022:  MOVWF  07
+0023:  BCF    03.5
+0024:  BSF    07.1
+....................       else  
+0025:  GOTO   02C
+....................          output_low(SPI_MOSI);// = 0; 
+0026:  BCF    20.1
+0027:  MOVF   20,W
+0028:  BSF    03.5
+0029:  MOVWF  07
+002A:  BCF    03.5
+002B:  BCF    07.1
+....................        
+....................      // output_high(SPI_CLK);// = 0; 
+....................        output_low(SPI_CLK); 
+002C:  BCF    20.0
+002D:  MOVF   20,W
+002E:  BSF    03.5
+002F:  MOVWF  07
+0030:  BCF    03.5
+0031:  BCF    07.0
+....................     //  delay_us( 2 ); 
+....................       Wdata <<= 1; 
+0032:  BCF    03.0
+0033:  RLF    67,F
+....................       delay_us( 2 ); 
+0034:  GOTO   035
+0035:  GOTO   036
+....................     //  output_low(SPI_CLK);// = 1; 
+....................     output_high(SPI_CLK); 
+0036:  BCF    20.0
+0037:  MOVF   20,W
+0038:  BSF    03.5
+0039:  MOVWF  07
+003A:  BCF    03.5
+003B:  BSF    07.0
+....................    } 
+003C:  INCF   68,F
+003D:  GOTO   019
+.................... } 
+003E:  RETURN
+.................... //SPI read data func 
+.................... unsigned int8 SPI_read_byte( void ) 
+.................... { 
+*
+02D0:  CLRF   69
+....................    unsigned int8 i; 
+....................    unsigned int8 Rdata = 0; 
+....................   // output_high( SPI_MISO );//when this line free set high 
+....................    //while(input(SPI_MISO)); 
+.................... //   output_low(SPI_CS); 
+....................    for( i=0; i<8; i++ ) 
+02D1:  CLRF   68
+02D2:  MOVF   68,W
+02D3:  SUBLW  07
+02D4:  BTFSS  03.0
+02D5:  GOTO   2FC
+....................    { 
+....................    //  output_high(SPI_CLK); 
+....................    output_low(SPI_CLK); 
+02D6:  BCF    20.0
+02D7:  MOVF   20,W
+02D8:  BSF    03.5
+02D9:  MOVWF  07
+02DA:  BCF    03.5
+02DB:  BCF    07.0
+....................      delay_us( 3 ); 
+02DC:  GOTO   2DD
+02DD:  GOTO   2DE
+02DE:  GOTO   2DF
+....................      Rdata <<= 1; 
+02DF:  BCF    03.0
+02E0:  RLF    69,F
+....................      delay_us( 3 ); 
+02E1:  GOTO   2E2
+02E2:  GOTO   2E3
+02E3:  GOTO   2E4
+....................      if( input(SPI_MISO) == 1 ) 
+02E4:  BSF    20.5
+02E5:  MOVF   20,W
+02E6:  BSF    03.5
+02E7:  MOVWF  07
+02E8:  BCF    03.5
+02E9:  BTFSS  07.5
+02EA:  GOTO   2ED
+....................      Rdata |= 0x01; 
+02EB:  BSF    69.0
+....................      else 
+02EC:  GOTO   2EE
+....................      Rdata &= 0xFE; 
+02ED:  BCF    69.0
+....................      delay_us( 3 ); 
+02EE:  GOTO   2EF
+02EF:  GOTO   2F0
+02F0:  GOTO   2F1
+....................    //  Rdata <<= 1; 
+....................    //  output_low(SPI_CLK); 
+....................    output_high(SPI_CLK); 
+02F1:  BCF    20.0
+02F2:  MOVF   20,W
+02F3:  BSF    03.5
+02F4:  MOVWF  07
+02F5:  BCF    03.5
+02F6:  BSF    07.0
+....................      delay_us( 3 ); 
+02F7:  GOTO   2F8
+02F8:  GOTO   2F9
+02F9:  GOTO   2FA
+....................     // SPI_CLK = 1;            
+....................    } 
+02FA:  INCF   68,F
+02FB:  GOTO   2D2
+....................    return Rdata; 
+02FC:  MOVF   69,W
+02FD:  MOVWF  78
+.................... } 
+02FE:  RETURN
+....................  
+.................... void SPI_write_data( BYTE regAddr, BYTE data) 
+.................... { 
+....................    output_low( SPI_CS); 
+*
+003F:  BCF    20.2
+0040:  MOVF   20,W
+0041:  BSF    03.5
+0042:  MOVWF  07
+0043:  BCF    03.5
+0044:  BCF    07.2
+....................    while( input( SPI_MISO)); 
+0045:  BSF    20.5
+0046:  MOVF   20,W
+0047:  BSF    03.5
+0048:  MOVWF  07
+0049:  BCF    03.5
+004A:  BTFSC  07.5
+004B:  GOTO   045
+....................    SPI_write_byte( regAddr & 0x7f); 
+004C:  MOVF   5C,W
+004D:  ANDLW  7F
+004E:  MOVWF  5E
+004F:  MOVWF  67
+0050:  CALL   018
+....................    delay_us(1); 
+0051:  GOTO   052
+....................    SPI_write_byte( data); 
+0052:  MOVF   5D,W
+0053:  MOVWF  67
+0054:  CALL   018
+....................    output_high( SPI_CS); 
+0055:  BCF    20.2
+0056:  MOVF   20,W
+0057:  BSF    03.5
+0058:  MOVWF  07
+0059:  BCF    03.5
+005A:  BSF    07.2
+.................... } 
+005B:  RETURN
+....................  
+.................... BYTE SPI_read_data( BYTE regAddr) 
+.................... { 
+....................    BYTE data; 
+....................    output_low( SPI_CS); 
+*
+0387:  BCF    20.2
+0388:  MOVF   20,W
+0389:  BSF    03.5
+038A:  MOVWF  07
+038B:  BCF    03.5
+038C:  BCF    07.2
+....................    while( input( SPI_MISO)); 
+038D:  BSF    20.5
+038E:  MOVF   20,W
+038F:  BSF    03.5
+0390:  MOVWF  07
+0391:  BCF    03.5
+0392:  BTFSC  07.5
+0393:  GOTO   38D
+....................    SPI_write_byte( regAddr | 0x80); 
+0394:  MOVF   61,W
+0395:  IORLW  80
+0396:  MOVWF  63
+0397:  MOVWF  67
+0398:  CALL   018
+....................    //if( spi_data_is_in()) 
+....................    delay_us( 1 ); 
+0399:  GOTO   39A
+....................    data = SPI_read_byte( ); 
+039A:  CALL   2D0
+039B:  MOVF   78,W
+039C:  MOVWF  62
+....................    output_high( SPI_CS ); 
+039D:  BCF    20.2
+039E:  MOVF   20,W
+039F:  BSF    03.5
+03A0:  MOVWF  07
+03A1:  BCF    03.5
+03A2:  BSF    07.2
+....................    delay_us( 1 ); 
+03A3:  GOTO   3A4
+....................    return data; 
+03A4:  MOVF   62,W
+03A5:  MOVWF  78
+.................... } 
+....................  
+.................... //read data from the cc1101 register 
+.................... BYTE SPI_read_status( BYTE regAddr ) 
+.................... { 
+....................    BYTE stat; 
+....................    output_low( SPI_CS ); 
+*
+02FF:  BCF    20.2
+0300:  MOVF   20,W
+0301:  BSF    03.5
+0302:  MOVWF  07
+0303:  BCF    03.5
+0304:  BCF    07.2
+....................    while( input( SPI_MISO )); 
+0305:  BSF    20.5
+0306:  MOVF   20,W
+0307:  BSF    03.5
+0308:  MOVWF  07
+0309:  BCF    03.5
+030A:  BTFSC  07.5
+030B:  GOTO   305
+....................    SPI_write_byte( Regaddr | 0xc0 ); 
+030C:  MOVF   61,W
+030D:  IORLW  C0
+030E:  MOVWF  63
+030F:  MOVWF  67
+0310:  CALL   018
+....................    delay_us( 1 ); 
+0311:  GOTO   312
+....................   // if( spi_data_is_in()) 
+....................    stat = SPI_read_byte( ); 
+0312:  CALL   2D0
+0313:  MOVF   78,W
+0314:  MOVWF  62
+....................    output_high( SPI_CS ); 
+0315:  BCF    20.2
+0316:  MOVF   20,W
+0317:  BSF    03.5
+0318:  MOVWF  07
+0319:  BCF    03.5
+031A:  BSF    07.2
+....................     delay_us( 1 ); 
+031B:  GOTO   31C
+....................    return stat; 
+031C:  MOVF   62,W
+031D:  MOVWF  78
+.................... } 
+031E:  RETURN
+....................  
+.................... //set the strober register  
+.................... void SPI_write_strobe( BYTE strobe ) 
+.................... { 
+....................    output_low( SPI_CS ); 
+*
+005C:  BCF    20.2
+005D:  MOVF   20,W
+005E:  BSF    03.5
+005F:  MOVWF  07
+0060:  BCF    03.5
+0061:  BCF    07.2
+....................    while( input( SPI_MISO )); 
+0062:  BSF    20.5
+0063:  MOVF   20,W
+0064:  BSF    03.5
+0065:  MOVWF  07
+0066:  BCF    03.5
+0067:  BTFSC  07.5
+0068:  GOTO   062
+....................    SPI_write_byte( strobe ); 
+0069:  MOVF   61,W
+006A:  MOVWF  67
+006B:  CALL   018
+....................     delay_us( 1 ); 
+006C:  GOTO   06D
+....................    output_high( SPI_CS ); 
+006D:  BCF    20.2
+006E:  MOVF   20,W
+006F:  BSF    03.5
+0070:  MOVWF  07
+0071:  BCF    03.5
+0072:  BSF    07.2
+.................... } 
+0073:  RETURN
+....................  
+.................... //write the burst 
+.................... void SPI_write_burst(BYTE regAddr, BYTE *Wbuf, BYTE count) 
+.................... { 
+....................    BYTE i; 
+....................    output_low( SPI_CS); 
+*
+0290:  BCF    20.2
+0291:  MOVF   20,W
+0292:  BSF    03.5
+0293:  MOVWF  07
+0294:  BCF    03.5
+0295:  BCF    07.2
+....................    while( input( SPI_MISO )); 
+0296:  BSF    20.5
+0297:  MOVF   20,W
+0298:  BSF    03.5
+0299:  MOVWF  07
+029A:  BCF    03.5
+029B:  BTFSC  07.5
+029C:  GOTO   296
+....................    SPI_write_byte( regAddr | 0x40 ); 
+029D:  MOVF   59,W
+029E:  IORLW  40
+029F:  MOVWF  5E
+02A0:  MOVWF  67
+02A1:  CALL   018
+....................    for(i=0; i<count;i++) 
+02A2:  CLRF   5D
+02A3:  MOVF   5C,W
+02A4:  SUBWF  5D,W
+02A5:  BTFSC  03.0
+02A6:  GOTO   2B7
+....................    { 
+....................      SPI_write_byte( Wbuf[i] );  
+02A7:  MOVF   5D,W
+02A8:  ADDWF  5A,W
+02A9:  MOVWF  04
+02AA:  BCF    03.7
+02AB:  BTFSC  5B.0
+02AC:  BSF    03.7
+02AD:  MOVF   00,W
+02AE:  MOVWF  5E
+02AF:  MOVWF  67
+02B0:  CALL   018
+....................      delay_us( 5 ); 
+02B1:  MOVLW  03
+02B2:  MOVWF  77
+02B3:  DECFSZ 77,F
+02B4:  GOTO   2B3
+....................    } 
+02B5:  INCF   5D,F
+02B6:  GOTO   2A3
+....................    output_high( SPI_CS ); 
+02B7:  BCF    20.2
+02B8:  MOVF   20,W
+02B9:  BSF    03.5
+02BA:  MOVWF  07
+02BB:  BCF    03.5
+02BC:  BSF    07.2
+.................... } 
+....................  
+.................... //Read the burst 
+.................... void SPI_read_burst(BYTE regAddr, BYTE *Rbuf, BYTE count) 
+.................... { 
+....................    BYTE i; 
+....................    output_low( SPI_CS); 
+*
+031F:  BCF    20.2
+0320:  MOVF   20,W
+0321:  BSF    03.5
+0322:  MOVWF  07
+0323:  BCF    03.5
+0324:  BCF    07.2
+....................    while( input( SPI_MISO)); 
+0325:  BSF    20.5
+0326:  MOVF   20,W
+0327:  BSF    03.5
+0328:  MOVWF  07
+0329:  BCF    03.5
+032A:  BTFSC  07.5
+032B:  GOTO   325
+....................    SPI_write_byte( regAddr | 0xc0); 
+032C:  MOVF   61,W
+032D:  IORLW  C0
+032E:  MOVWF  66
+032F:  MOVWF  67
+0330:  CALL   018
+....................    for( i=0; i<count; i++) 
+0331:  CLRF   65
+0332:  MOVF   64,W
+0333:  SUBWF  65,W
+0334:  BTFSC  03.0
+0335:  GOTO   34B
+....................    { 
+....................       Rbuf[i] = SPI_read_byte(); 
+0336:  MOVF   65,W
+0337:  ADDWF  62,W
+0338:  MOVWF  78
+0339:  MOVF   63,W
+033A:  MOVWF  7A
+033B:  BTFSC  03.0
+033C:  INCF   7A,F
+033D:  MOVF   78,W
+033E:  MOVWF  66
+033F:  MOVF   7A,W
+0340:  MOVWF  67
+0341:  CALL   2D0
+0342:  MOVF   66,W
+0343:  MOVWF  04
+0344:  BCF    03.7
+0345:  BTFSC  67.0
+0346:  BSF    03.7
+0347:  MOVF   78,W
+0348:  MOVWF  00
+....................    } 
+0349:  INCF   65,F
+034A:  GOTO   332
+....................    output_high( SPI_CS); 
+034B:  BCF    20.2
+034C:  MOVF   20,W
+034D:  BSF    03.5
+034E:  MOVWF  07
+034F:  BCF    03.5
+0350:  BSF    07.2
+.................... } 
+0351:  RETURN
+....................  
+.................... //RESET CC1101 chip 
+.................... void SPI_reset_cc11( void ) 
+.................... { 
+....................  //  SPI_write_strobe( SIDLE ); 
+.................... // output_high( LED_GREEN); 
+....................    output_low( SPI_CS ); 
+*
+00A9:  BCF    20.2
+00AA:  MOVF   20,W
+00AB:  BSF    03.5
+00AC:  MOVWF  07
+00AD:  BCF    03.5
+00AE:  BCF    07.2
+....................    while( input( SPI_MISO )); 
+00AF:  BSF    20.5
+00B0:  MOVF   20,W
+00B1:  BSF    03.5
+00B2:  MOVWF  07
+00B3:  BCF    03.5
+00B4:  BTFSC  07.5
+00B5:  GOTO   0AF
+.................... //   output_high( LED_GREEN); 
+....................    SPI_write_byte( SRES ); 
+00B6:  MOVLW  30
+00B7:  MOVWF  67
+00B8:  CALL   018
+....................    delay_us( 1 ); 
+00B9:  GOTO   0BA
+....................    output_high( SPI_CS ); 
+00BA:  BCF    20.2
+00BB:  MOVF   20,W
+00BC:  BSF    03.5
+00BD:  MOVWF  07
+00BE:  BCF    03.5
+00BF:  BSF    07.2
+.................... } 
+.................... //power on reset  
+.................... void SPI_powerup_reset( void ) 
+.................... { 
+....................    output_low( SPI_CS ); 
+*
+0097:  BCF    20.2
+0098:  MOVF   20,W
+0099:  BSF    03.5
+009A:  MOVWF  07
+009B:  BCF    03.5
+009C:  BCF    07.2
+....................    delay_us( 2 ); 
+009D:  GOTO   09E
+009E:  GOTO   09F
+....................    output_high( SPI_CS ); 
+009F:  BCF    20.2
+00A0:  MOVF   20,W
+00A1:  BSF    03.5
+00A2:  MOVWF  07
+00A3:  BCF    03.5
+00A4:  BSF    07.2
+....................     delay_us( 41 ); 
+00A5:  MOVLW  1B
+00A6:  MOVWF  77
+00A7:  DECFSZ 77,F
+00A8:  GOTO   0A7
+....................    SPI_reset_cc11(); 
+.................... } 
+.................... /* 
+.................... void writeRfSettings( void) 
+.................... { 
+....................    SPI_write_data( FSCTRL1, 0x0C); 
+....................    SPI_write_data( FSCTRL0, 0x00); 
+....................    SPI_write_data( FREQ2, 0x23); 
+....................    SPI_write_data( FREQ1, 0x31); 
+....................    SPI_write_data( FREQ0, 0x3B); 
+....................    SPI_write_data( MDMCFG4, 0x2D); 
+....................    SPI_write_data( MDMCFG3, 0x3B); 
+....................    SPI_write_data( MDMCFG2, 0x13); 
+....................    SPI_write_data( MDMCFG1, 0x22); 
+....................    SPI_write_data( MDMCFG0, 0xF8); 
+....................    SPI_write_data( CHANNR, 0x00); 
+....................    SPI_write_data( DEVIATN, 0x62); 
+....................    SPI_write_data( FREND1, 0xB6); 
+....................    SPI_write_data( FREND0, 0x10); 
+....................    SPI_write_data( MCSM0, 0x18); 
+....................    SPI_write_data( FOCCFG, 0x1D); 
+....................    SPI_write_data( BSCFG, 0x1C); 
+....................    SPI_write_data( AGCCTRL2, 0xC7); 
+....................    SPI_write_data( AGCCTRL1, 0x00); 
+....................    SPI_write_data( AGCCTRL0, 0xB0); 
+....................    SPI_write_data( FSCAL3, 0xEA); 
+....................    SPI_write_data( FSCAL2, 0x2A); 
+....................    SPI_write_data( FSCAL1, 0x00); 
+....................    SPI_write_data( FSCAL0, 0x1F); 
+....................    SPI_write_data( FSTEST, 0x59); 
+....................    SPI_write_data( TEST2, 0x88); 
+....................    SPI_write_data( TEST1, 0x31); 
+....................    SPI_write_data( TEST0, 0x09); 
+....................    SPI_write_data( FIFOTHR, 0x07); 
+....................    SPI_write_data( IOCFG2, 0x29); 
+....................    SPI_write_data( IOCFG0, 0x06); 
+....................    SPI_write_data( PKTCTRL1, 0x04); 
+....................    SPI_write_data( PKTCTRL0, 0x05); 
+....................    SPI_write_data( ADDR, 0x00); 
+....................    SPI_write_data( PKTLEN, 0xFF); 
+....................  
+.................... } 
+.................... */ 
+.................... void writeRfSettings( RF_SETTINGS *pRfSettings) 
+.................... { 
+....................    SPI_write_data( FSCTRL1, pRfSettings->sFSCTRL1); 
+*
+00C4:  MOVF   59,W
+00C5:  MOVWF  04
+00C6:  BCF    03.7
+00C7:  BTFSC  5A.0
+00C8:  BSF    03.7
+00C9:  MOVF   00,W
+00CA:  MOVWF  5B
+00CB:  MOVLW  0B
+00CC:  MOVWF  5C
+00CD:  MOVF   5B,W
+00CE:  MOVWF  5D
+00CF:  CALL   03F
+....................    SPI_write_data( FSCTRL0, pRfSettings->sFSCTRL0); 
+00D0:  MOVLW  01
+00D1:  ADDWF  59,W
+00D2:  MOVWF  04
+00D3:  BCF    03.7
+00D4:  BTFSC  5A.0
+00D5:  BSF    03.7
+00D6:  MOVF   00,W
+00D7:  MOVWF  5B
+00D8:  MOVLW  0C
+00D9:  MOVWF  5C
+00DA:  MOVF   5B,W
+00DB:  MOVWF  5D
+00DC:  CALL   03F
+....................    SPI_write_data( FREQ2, pRfSettings->sFREQ2); 
+00DD:  MOVLW  02
+00DE:  ADDWF  59,W
+00DF:  MOVWF  04
+00E0:  BCF    03.7
+00E1:  BTFSC  5A.0
+00E2:  BSF    03.7
+00E3:  MOVF   00,W
+00E4:  MOVWF  5B
+00E5:  MOVLW  0D
+00E6:  MOVWF  5C
+00E7:  MOVF   5B,W
+00E8:  MOVWF  5D
+00E9:  CALL   03F
+....................    SPI_write_data( FREQ1, pRfSettings->sFREQ1); 
+00EA:  MOVLW  03
+00EB:  ADDWF  59,W
+00EC:  MOVWF  04
+00ED:  BCF    03.7
+00EE:  BTFSC  5A.0
+00EF:  BSF    03.7
+00F0:  MOVF   00,W
+00F1:  MOVWF  5B
+00F2:  MOVLW  0E
+00F3:  MOVWF  5C
+00F4:  MOVF   5B,W
+00F5:  MOVWF  5D
+00F6:  CALL   03F
+....................    SPI_write_data( FREQ0, pRfSettings->sFREQ0); 
+00F7:  MOVLW  04
+00F8:  ADDWF  59,W
+00F9:  MOVWF  04
+00FA:  BCF    03.7
+00FB:  BTFSC  5A.0
+00FC:  BSF    03.7
+00FD:  MOVF   00,W
+00FE:  MOVWF  5B
+00FF:  MOVLW  0F
+0100:  MOVWF  5C
+0101:  MOVF   5B,W
+0102:  MOVWF  5D
+0103:  CALL   03F
+....................    SPI_write_data( MDMCFG4, pRfSettings->sMDMCFG4); 
+0104:  MOVLW  05
+0105:  ADDWF  59,W
+0106:  MOVWF  04
+0107:  BCF    03.7
+0108:  BTFSC  5A.0
+0109:  BSF    03.7
+010A:  MOVF   00,W
+010B:  MOVWF  5B
+010C:  MOVLW  10
+010D:  MOVWF  5C
+010E:  MOVF   5B,W
+010F:  MOVWF  5D
+0110:  CALL   03F
+....................    SPI_write_data( MDMCFG3, pRfSettings->sMDMCFG3); 
+0111:  MOVLW  06
+0112:  ADDWF  59,W
+0113:  MOVWF  04
+0114:  BCF    03.7
+0115:  BTFSC  5A.0
+0116:  BSF    03.7
+0117:  MOVF   00,W
+0118:  MOVWF  5B
+0119:  MOVLW  11
+011A:  MOVWF  5C
+011B:  MOVF   5B,W
+011C:  MOVWF  5D
+011D:  CALL   03F
+....................    SPI_write_data( MDMCFG2, pRfSettings->sMDMCFG2); 
+011E:  MOVLW  07
+011F:  ADDWF  59,W
+0120:  MOVWF  04
+0121:  BCF    03.7
+0122:  BTFSC  5A.0
+0123:  BSF    03.7
+0124:  MOVF   00,W
+0125:  MOVWF  5B
+0126:  MOVLW  12
+0127:  MOVWF  5C
+0128:  MOVF   5B,W
+0129:  MOVWF  5D
+012A:  CALL   03F
+....................    SPI_write_data( MDMCFG1, pRfSettings->sMDMCFG1); 
+012B:  MOVLW  08
+012C:  ADDWF  59,W
+012D:  MOVWF  04
+012E:  BCF    03.7
+012F:  BTFSC  5A.0
+0130:  BSF    03.7
+0131:  MOVF   00,W
+0132:  MOVWF  5B
+0133:  MOVLW  13
+0134:  MOVWF  5C
+0135:  MOVF   5B,W
+0136:  MOVWF  5D
+0137:  CALL   03F
+....................    SPI_write_data( MDMCFG0, pRfSettings->sMDMCFG0); 
+0138:  MOVLW  09
+0139:  ADDWF  59,W
+013A:  MOVWF  04
+013B:  BCF    03.7
+013C:  BTFSC  5A.0
+013D:  BSF    03.7
+013E:  MOVF   00,W
+013F:  MOVWF  5B
+0140:  MOVLW  14
+0141:  MOVWF  5C
+0142:  MOVF   5B,W
+0143:  MOVWF  5D
+0144:  CALL   03F
+....................    SPI_write_data( CHANNR, pRfSettings->sCHANNR); 
+0145:  MOVLW  0A
+0146:  ADDWF  59,W
+0147:  MOVWF  04
+0148:  BCF    03.7
+0149:  BTFSC  5A.0
+014A:  BSF    03.7
+014B:  MOVF   00,W
+014C:  MOVWF  5B
+014D:  MOVLW  0A
+014E:  MOVWF  5C
+014F:  MOVF   5B,W
+0150:  MOVWF  5D
+0151:  CALL   03F
+....................    SPI_write_data( DEVIATN, pRfSettings->sDEVIATN); 
+0152:  MOVLW  0B
+0153:  ADDWF  59,W
+0154:  MOVWF  04
+0155:  BCF    03.7
+0156:  BTFSC  5A.0
+0157:  BSF    03.7
+0158:  MOVF   00,W
+0159:  MOVWF  5B
+015A:  MOVLW  15
+015B:  MOVWF  5C
+015C:  MOVF   5B,W
+015D:  MOVWF  5D
+015E:  CALL   03F
+....................    SPI_write_data( FREND1, pRfSettings->sFREND1); 
+015F:  MOVLW  0C
+0160:  ADDWF  59,W
+0161:  MOVWF  04
+0162:  BCF    03.7
+0163:  BTFSC  5A.0
+0164:  BSF    03.7
+0165:  MOVF   00,W
+0166:  MOVWF  5B
+0167:  MOVLW  21
+0168:  MOVWF  5C
+0169:  MOVF   5B,W
+016A:  MOVWF  5D
+016B:  CALL   03F
+....................    SPI_write_data( FREND0, pRfSettings->sFREND0); 
+016C:  MOVLW  0D
+016D:  ADDWF  59,W
+016E:  MOVWF  04
+016F:  BCF    03.7
+0170:  BTFSC  5A.0
+0171:  BSF    03.7
+0172:  MOVF   00,W
+0173:  MOVWF  5B
+0174:  MOVLW  22
+0175:  MOVWF  5C
+0176:  MOVF   5B,W
+0177:  MOVWF  5D
+0178:  CALL   03F
+....................    SPI_write_data( MCSM0, pRfSettings->sMCSM0); 
+0179:  MOVLW  0E
+017A:  ADDWF  59,W
+017B:  MOVWF  04
+017C:  BCF    03.7
+017D:  BTFSC  5A.0
+017E:  BSF    03.7
+017F:  MOVF   00,W
+0180:  MOVWF  5B
+0181:  MOVLW  18
+0182:  MOVWF  5C
+0183:  MOVF   5B,W
+0184:  MOVWF  5D
+0185:  CALL   03F
+....................    SPI_write_data( FOCCFG, pRfSettings->sFOCCFG); 
+0186:  MOVLW  0F
+0187:  ADDWF  59,W
+0188:  MOVWF  04
+0189:  BCF    03.7
+018A:  BTFSC  5A.0
+018B:  BSF    03.7
+018C:  MOVF   00,W
+018D:  MOVWF  5B
+018E:  MOVLW  19
+018F:  MOVWF  5C
+0190:  MOVF   5B,W
+0191:  MOVWF  5D
+0192:  CALL   03F
+....................    SPI_write_data( BSCFG, pRfSettings->sBSCFG); 
+0193:  MOVLW  10
+0194:  ADDWF  59,W
+0195:  MOVWF  04
+0196:  BCF    03.7
+0197:  BTFSC  5A.0
+0198:  BSF    03.7
+0199:  MOVF   00,W
+019A:  MOVWF  5B
+019B:  MOVLW  1A
+019C:  MOVWF  5C
+019D:  MOVF   5B,W
+019E:  MOVWF  5D
+019F:  CALL   03F
+....................    SPI_write_data( AGCCTRL2, pRfSettings->sAGCCTRL2); 
+01A0:  MOVLW  11
+01A1:  ADDWF  59,W
+01A2:  MOVWF  04
+01A3:  BCF    03.7
+01A4:  BTFSC  5A.0
+01A5:  BSF    03.7
+01A6:  MOVF   00,W
+01A7:  MOVWF  5B
+01A8:  MOVLW  1B
+01A9:  MOVWF  5C
+01AA:  MOVF   5B,W
+01AB:  MOVWF  5D
+01AC:  CALL   03F
+....................    SPI_write_data( AGCCTRL1, pRfSettings->sAGCCTRL1); 
+01AD:  MOVLW  12
+01AE:  ADDWF  59,W
+01AF:  MOVWF  04
+01B0:  BCF    03.7
+01B1:  BTFSC  5A.0
+01B2:  BSF    03.7
+01B3:  MOVF   00,W
+01B4:  MOVWF  5B
+01B5:  MOVLW  1C
+01B6:  MOVWF  5C
+01B7:  MOVF   5B,W
+01B8:  MOVWF  5D
+01B9:  CALL   03F
+....................    SPI_write_data( AGCCTRL0, pRfSettings->sAGCCTRL0); 
+01BA:  MOVLW  13
+01BB:  ADDWF  59,W
+01BC:  MOVWF  04
+01BD:  BCF    03.7
+01BE:  BTFSC  5A.0
+01BF:  BSF    03.7
+01C0:  MOVF   00,W
+01C1:  MOVWF  5B
+01C2:  MOVLW  1D
+01C3:  MOVWF  5C
+01C4:  MOVF   5B,W
+01C5:  MOVWF  5D
+01C6:  CALL   03F
+....................    SPI_write_data( FSCAL3, pRfSettings->sFSCAL3); 
+01C7:  MOVLW  14
+01C8:  ADDWF  59,W
+01C9:  MOVWF  04
+01CA:  BCF    03.7
+01CB:  BTFSC  5A.0
+01CC:  BSF    03.7
+01CD:  MOVF   00,W
+01CE:  MOVWF  5B
+01CF:  MOVLW  23
+01D0:  MOVWF  5C
+01D1:  MOVF   5B,W
+01D2:  MOVWF  5D
+01D3:  CALL   03F
+....................    SPI_write_data( FSCAL2, pRfSettings->sFSCAL2); 
+01D4:  MOVLW  15
+01D5:  ADDWF  59,W
+01D6:  MOVWF  04
+01D7:  BCF    03.7
+01D8:  BTFSC  5A.0
+01D9:  BSF    03.7
+01DA:  MOVF   00,W
+01DB:  MOVWF  5B
+01DC:  MOVLW  24
+01DD:  MOVWF  5C
+01DE:  MOVF   5B,W
+01DF:  MOVWF  5D
+01E0:  CALL   03F
+....................    SPI_write_data( FSCAL1, pRfSettings->sFSCAL1); 
+01E1:  MOVLW  16
+01E2:  ADDWF  59,W
+01E3:  MOVWF  04
+01E4:  BCF    03.7
+01E5:  BTFSC  5A.0
+01E6:  BSF    03.7
+01E7:  MOVF   00,W
+01E8:  MOVWF  5B
+01E9:  MOVLW  25
+01EA:  MOVWF  5C
+01EB:  MOVF   5B,W
+01EC:  MOVWF  5D
+01ED:  CALL   03F
+....................    SPI_write_data( FSCAL0, pRfSettings->sFSCAL0); 
+01EE:  MOVLW  17
+01EF:  ADDWF  59,W
+01F0:  MOVWF  04
+01F1:  BCF    03.7
+01F2:  BTFSC  5A.0
+01F3:  BSF    03.7
+01F4:  MOVF   00,W
+01F5:  MOVWF  5B
+01F6:  MOVLW  26
+01F7:  MOVWF  5C
+01F8:  MOVF   5B,W
+01F9:  MOVWF  5D
+01FA:  CALL   03F
+....................    SPI_write_data( FSTEST, pRfSettings->sFSTEST); 
+01FB:  MOVLW  18
+01FC:  ADDWF  59,W
+01FD:  MOVWF  04
+01FE:  BCF    03.7
+01FF:  BTFSC  5A.0
+0200:  BSF    03.7
+0201:  MOVF   00,W
+0202:  MOVWF  5B
+0203:  MOVLW  29
+0204:  MOVWF  5C
+0205:  MOVF   5B,W
+0206:  MOVWF  5D
+0207:  CALL   03F
+....................    SPI_write_data( TEST2, pRfSettings->sTEST2); 
+0208:  MOVLW  19
+0209:  ADDWF  59,W
+020A:  MOVWF  04
+020B:  BCF    03.7
+020C:  BTFSC  5A.0
+020D:  BSF    03.7
+020E:  MOVF   00,W
+020F:  MOVWF  5B
+0210:  MOVLW  2C
+0211:  MOVWF  5C
+0212:  MOVF   5B,W
+0213:  MOVWF  5D
+0214:  CALL   03F
+....................    SPI_write_data( TEST1, pRfSettings->sTEST1); 
+0215:  MOVLW  1A
+0216:  ADDWF  59,W
+0217:  MOVWF  04
+0218:  BCF    03.7
+0219:  BTFSC  5A.0
+021A:  BSF    03.7
+021B:  MOVF   00,W
+021C:  MOVWF  5B
+021D:  MOVLW  2D
+021E:  MOVWF  5C
+021F:  MOVF   5B,W
+0220:  MOVWF  5D
+0221:  CALL   03F
+....................    SPI_write_data( TEST0, pRfSettings->sTEST0); 
+0222:  MOVLW  1B
+0223:  ADDWF  59,W
+0224:  MOVWF  04
+0225:  BCF    03.7
+0226:  BTFSC  5A.0
+0227:  BSF    03.7
+0228:  MOVF   00,W
+0229:  MOVWF  5B
+022A:  MOVLW  2E
+022B:  MOVWF  5C
+022C:  MOVF   5B,W
+022D:  MOVWF  5D
+022E:  CALL   03F
+....................    SPI_write_data( FIFOTHR, pRfSettings->sFIFOTHR); 
+022F:  MOVLW  1C
+0230:  ADDWF  59,W
+0231:  MOVWF  04
+0232:  BCF    03.7
+0233:  BTFSC  5A.0
+0234:  BSF    03.7
+0235:  MOVF   00,W
+0236:  MOVWF  5B
+0237:  MOVLW  03
+0238:  MOVWF  5C
+0239:  MOVF   5B,W
+023A:  MOVWF  5D
+023B:  CALL   03F
+....................    SPI_write_data( IOCFG2, pRfSettings->sIOCFG2); 
+023C:  MOVLW  1D
+023D:  ADDWF  59,W
+023E:  MOVWF  04
+023F:  BCF    03.7
+0240:  BTFSC  5A.0
+0241:  BSF    03.7
+0242:  MOVF   00,W
+0243:  MOVWF  5B
+0244:  CLRF   5C
+0245:  MOVF   5B,W
+0246:  MOVWF  5D
+0247:  CALL   03F
+....................    SPI_write_data( IOCFG0, pRfSettings->sIOCFG0); 
+0248:  MOVLW  1E
+0249:  ADDWF  59,W
+024A:  MOVWF  04
+024B:  BCF    03.7
+024C:  BTFSC  5A.0
+024D:  BSF    03.7
+024E:  MOVF   00,W
+024F:  MOVWF  5B
+0250:  MOVLW  02
+0251:  MOVWF  5C
+0252:  MOVF   5B,W
+0253:  MOVWF  5D
+0254:  CALL   03F
+....................    SPI_write_data( PKTCTRL1, pRfSettings->sPKTCTRL1); 
+0255:  MOVLW  1F
+0256:  ADDWF  59,W
+0257:  MOVWF  04
+0258:  BCF    03.7
+0259:  BTFSC  5A.0
+025A:  BSF    03.7
+025B:  MOVF   00,W
+025C:  MOVWF  5B
+025D:  MOVLW  07
+025E:  MOVWF  5C
+025F:  MOVF   5B,W
+0260:  MOVWF  5D
+0261:  CALL   03F
+....................    SPI_write_data( PKTCTRL0, pRfSettings->sPKTCTRL0); 
+0262:  MOVLW  20
+0263:  ADDWF  59,W
+0264:  MOVWF  04
+0265:  BCF    03.7
+0266:  BTFSC  5A.0
+0267:  BSF    03.7
+0268:  MOVF   00,W
+0269:  MOVWF  5B
+026A:  MOVLW  08
+026B:  MOVWF  5C
+026C:  MOVF   5B,W
+026D:  MOVWF  5D
+026E:  CALL   03F
+....................    SPI_write_data( ADDR, pRfSettings->sADDR); 
+026F:  MOVLW  21
+0270:  ADDWF  59,W
+0271:  MOVWF  04
+0272:  BCF    03.7
+0273:  BTFSC  5A.0
+0274:  BSF    03.7
+0275:  MOVF   00,W
+0276:  MOVWF  5B
+0277:  MOVLW  09
+0278:  MOVWF  5C
+0279:  MOVF   5B,W
+027A:  MOVWF  5D
+027B:  CALL   03F
+....................    SPI_write_data( PKTLEN, pRfSettings->sPKTLEN); 
+027C:  MOVLW  22
+027D:  ADDWF  59,W
+027E:  MOVWF  04
+027F:  BCF    03.7
+0280:  BTFSC  5A.0
+0281:  BSF    03.7
+0282:  MOVF   00,W
+0283:  MOVWF  5B
+0284:  MOVLW  06
+0285:  MOVWF  5C
+0286:  MOVF   5B,W
+0287:  MOVWF  5D
+0288:  CALL   03F
+.................... } 
+....................  
+.................... /* 
+.................... //read the packet from cc1101 
+.................... BYTE Read_packet( BYTE *Rbuffer, BYTE *count ) 
+.................... { 
+....................    BYTE state[2]; 
+....................    BYTE size = 0; 
+....................    BYTE i = (*count)* 4; 
+.................... //   SPI_write_strobe( SFRX ); 
+....................    SPI_write_strobe( SRX ); 
+....................    delay_ms(5); 
+....................  //  output_high( LED_RED );delay_ms(30); 
+....................  //  delay_ms(30); 
+....................    if(SPI_read_status(RXBYTES)==0) 
+....................    { 
+....................       output_high( LED_GREEN ); 
+....................       return 0;       
+....................    } 
+....................    while(input(GDO0)) 
+....................    { 
+....................       --i; 
+....................       if(i<1) 
+....................       { 
+....................          SPI_write_strobe( SFRX ); 
+....................          SPI_write_strobe(SIDLE); 
+....................          return 0; 
+....................       } 
+....................    } 
+.................... //   output_high( LED_GREEN ); 
+....................    if(SPI_read_status(RXBYTES)) 
+....................    { 
+....................       size = SPI_read_data( RX_FIFO ); 
+....................       if(size <= *count) 
+....................       { 
+....................          SPI_read_burst( RX_FIFO,Rbuffer,size ); 
+....................          *count = size; 
+....................          SPI_read_burst( RX_FIFO,state,2 ); 
+....................      //    output_high( LED_GREEN );// 
+....................          SPI_write_strobe( SFRX ); 
+....................          SPI_write_strobe( SRX );//add this command at here for test 
+....................          return (state[1]&0x80); 
+....................       } 
+....................    } 
+....................    else 
+....................    { 
+....................       *count = size; 
+....................       SPI_write_strobe(SIDLE); 
+....................       SPI_write_strobe( SFRX ); 
+....................       return 0; 
+....................    } 
+.................... }*/ 
+....................  
+.................... //write the packet to cc1101 
+.................... void Write_packet( BYTE *Wbuffer, BYTE size ) 
+.................... { 
+....................    SPI_write_strobe( SIDLE ); 
+....................   // delay_ms(10); 
+....................    SPI_write_strobe( SFTX ); 
+....................  //  delay_ms(10);  
+....................    SPI_write_data( TX_FIFO, size ); 
+....................    SPI_write_burst( TX_FIFO,Wbuffer,size );  
+....................    SPI_write_strobe( STX ); 
+....................  //  delay_ms(10); //output_high( LED_RED ); 
+.................... //   output_low( LED_GREEN ); //for test 
+....................    while(!input(GDO0)); // too fast 
+....................    while(input(GDO0)); 
+....................  //  delay_ms(10); 
+....................    
+....................   while((SPI_read_status(TXBYTES)&0x7F) != 0x00 ) 
+....................   { 
+....................       SPI_write_strobe( SIDLE ); 
+....................       return; 
+....................   } 
+....................    SPI_write_strobe( SFRX ); 
+....................   // SPI_write_strobe( SIDLE ); 
+.................... } 
+.................... unsigned char Read_packet( unsigned char *Rbuffer, unsigned char *count ) 
+.................... { 
+*
+0352:  CLRF   5F
+0353:  MOVF   5B,W
+0354:  MOVWF  04
+0355:  BCF    03.7
+0356:  BTFSC  5C.0
+0357:  BSF    03.7
+0358:  RLF    00,W
+0359:  MOVWF  60
+035A:  RLF    60,F
+035B:  MOVLW  FC
+035C:  ANDWF  60,F
+....................    unsigned char state[2]; 
+....................    unsigned char size = 0; 
+....................    unsigned char i = (*count)* 4; 
+.................... //   SPI_write_strobe( SFRX ); 
+....................    SPI_write_strobe( SRX ); 
+035D:  MOVLW  34
+035E:  MOVWF  61
+035F:  CALL   05C
+....................    delay_ms(5); 
+0360:  MOVLW  05
+0361:  MOVWF  61
+0362:  CALL   004
+....................  //  output_high( LED_RED );delay_ms(30); 
+....................  //  delay_ms(30); 
+....................    if(SPI_read_status(RXBYTES)==0) 
+0363:  MOVLW  3B
+0364:  MOVWF  61
+0365:  CALL   2FF
+0366:  MOVF   78,F
+0367:  BTFSS  03.2
+0368:  GOTO   36C
+....................    { 
+....................     //  output_high( LED_GREEN );// 
+....................       return 0;       
+0369:  MOVLW  00
+036A:  MOVWF  78
+036B:  GOTO   3E8
+....................    } 
+....................    while(input(GDO0)) 
+....................    { 
+036C:  BSF    20.6
+036D:  MOVF   20,W
+036E:  BSF    03.5
+036F:  MOVWF  07
+0370:  BCF    03.5
+0371:  BTFSS  07.6
+0372:  GOTO   37F
+....................       --i; 
+0373:  DECFSZ 60,F
+....................       if(i<1) 
+0374:  GOTO   37E
+....................       { 
+....................          SPI_write_strobe( SFRX ); 
+0375:  MOVLW  3A
+0376:  MOVWF  61
+0377:  CALL   05C
+....................          SPI_write_strobe(SIDLE); 
+0378:  MOVLW  36
+0379:  MOVWF  61
+037A:  CALL   05C
+....................          return 0; 
+037B:  MOVLW  00
+037C:  MOVWF  78
+037D:  GOTO   3E8
+....................       } 
+....................    } 
+037E:  GOTO   36C
+.................... //   output_high( LED_GREEN ); 
+....................    if(SPI_read_status(RXBYTES)) 
+037F:  MOVLW  3B
+0380:  MOVWF  61
+0381:  CALL   2FF
+0382:  MOVF   78,F
+0383:  BTFSC  03.2
+0384:  GOTO   3D8
+....................    { 
+....................       size = SPI_read_data( RX_FIFO ); 
+0385:  MOVLW  3F
+0386:  MOVWF  61
+*
+03A6:  MOVF   78,W
+03A7:  MOVWF  5F
+....................       if(size <= *count) 
+03A8:  MOVF   5C,W
+03A9:  MOVWF  7A
+03AA:  MOVF   5B,W
+03AB:  MOVWF  04
+03AC:  BCF    03.7
+03AD:  BTFSC  7A.0
+03AE:  BSF    03.7
+03AF:  MOVF   00,W
+03B0:  SUBWF  5F,W
+03B1:  BTFSC  03.2
+03B2:  GOTO   3B5
+03B3:  BTFSC  03.0
+03B4:  GOTO   3D7
+....................       { 
+....................          SPI_read_burst( RX_FIFO,Rbuffer,size );  
+03B5:  MOVLW  3F
+03B6:  MOVWF  61
+03B7:  MOVF   5A,W
+03B8:  MOVWF  63
+03B9:  MOVF   59,W
+03BA:  MOVWF  62
+03BB:  MOVF   5F,W
+03BC:  MOVWF  64
+03BD:  CALL   31F
+....................          *count = size; 
+03BE:  MOVF   5B,W
+03BF:  MOVWF  04
+03C0:  BCF    03.7
+03C1:  BTFSC  5C.0
+03C2:  BSF    03.7
+03C3:  MOVF   5F,W
+03C4:  MOVWF  00
+....................          SPI_read_burst( RX_FIFO,state,2 ); 
+03C5:  MOVLW  3F
+03C6:  MOVWF  61
+03C7:  CLRF   63
+03C8:  MOVLW  5D
+03C9:  MOVWF  62
+03CA:  MOVLW  02
+03CB:  MOVWF  64
+03CC:  CALL   31F
+....................      //    output_high( LED_GREEN );// 
+....................          SPI_write_strobe( SFRX ); 
+03CD:  MOVLW  3A
+03CE:  MOVWF  61
+03CF:  CALL   05C
+....................          SPI_write_strobe( SRX );//add this command at here for test 
+03D0:  MOVLW  34
+03D1:  MOVWF  61
+03D2:  CALL   05C
+....................          return (state[1]&0x80); 
+03D3:  MOVF   5E,W
+03D4:  ANDLW  80
+03D5:  MOVWF  78
+03D6:  GOTO   3E8
+....................       } 
+....................    } 
+....................    else 
+03D7:  GOTO   3E8
+....................    { 
+....................       *count = size; 
+03D8:  MOVF   5B,W
+03D9:  MOVWF  04
+03DA:  BCF    03.7
+03DB:  BTFSC  5C.0
+03DC:  BSF    03.7
+03DD:  MOVF   5F,W
+03DE:  MOVWF  00
+....................       SPI_write_strobe(SIDLE); 
+03DF:  MOVLW  36
+03E0:  MOVWF  61
+03E1:  CALL   05C
+....................       SPI_write_strobe( SFRX ); 
+03E2:  MOVLW  3A
+03E3:  MOVWF  61
+03E4:  CALL   05C
+....................       return 0; 
+03E5:  MOVLW  00
+03E6:  MOVWF  78
+03E7:  GOTO   3E8
+....................    } 
+.................... } 
+03E8:  GOTO   468 (RETURN)
+.................... /* 
+.................... void read_analog_input(char ix) 
+.................... { 
+....................   unsigned int16 v; 
+....................  
+....................   set_adc_channel(MuxChannels[ix]);  
+....................   delay_us(10); 
+....................  
+....................   v = filter_reading(); 
+....................  
+....................   disable_interrupts(GLOBAL); 
+....................   //if( ix == 0 )  // Debug, To measure I2C iterations  
+....................   analog_input_data[ix] = v; 
+....................   enable_interrupts(GLOBAL); 
+....................  
+....................   delay_us(20); 
+.................... } 
+....................  
+.................... unsigned int16 filter_reading( ) 
+.................... { 
+....................   unsigned int16 AI; 
+....................  
+....................   unsigned int16 adc_buffer; 
+....................  
+....................   data_core=0; 
+....................   while(sampling_counter<=avg) 
+....................   { 
+....................     com_int_flag = 0; 
+....................     adc_buffer = read_adc(); 
+....................     if(com_int_flag == 0) 
+....................     { 
+....................       data_core += adc_buffer; 
+....................       sampling_counter++; 
+....................     } 
+....................   } 
+....................  
+....................   AI = (data_core/sampling_counter); 
+....................   data_core = 0; 
+....................   sampling_counter = 0; 
+....................  
+....................   return AI ; 
+.................... } 
+....................  
+.................... */ 
+....................  
+....................  
+....................  
+
+Configuration Fuses:
+   Word  1: 2FC4   INTRC_IO NOWDT PUT NOMCLR NOPROTECT NOCPD BROWNOUT IESO FCMEN NOLVP NODEBUG
+   Word  2: 3FFF   BORV40 NOWRT

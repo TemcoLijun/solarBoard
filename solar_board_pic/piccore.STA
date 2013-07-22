@@ -1,0 +1,61 @@
+
+ROM used: 1124 (27%)
+          1124 (27%) including unused fragments
+
+          1 Average locations per line
+          4 Average locations per statement
+
+RAM used: 72 (28%) at main() level
+          98 (38%) worst case
+
+Stack used: 3 worst case (out of 16 total available)
+
+Lines Stmts  %   Files
+----- ----- ---  -----
+  613   257 100  piccore.c
+  511     0   0  pic.h
+  520     0   0  C:\Program Files\PICC\devices\16F1824.h
+----- -----
+ 1644   257 Total
+
+Page ROM  %  RAM   Vol Diff  Functions:
+---- --- --- ---   --- ----  ----------
+0     22   2   1             @delay_ms1
+0     41   4   0             @const179
+0    183  16   4  1116  6.5  main
+0    124  11  12   779 10.3  Temp_filter_reading
+0     41   4   5             @DIV1616
+0    213  19  10   823 10.9  look_up_table
+0     27   2   5             @MUL1616
+0    306  27   0   214  1.8  initial
+0     32   3   2   239  5.3  SPI_write_byte
+ Inline        0   263  1.9  SPI_initial
+0     28   2   2   207  3.0  SPI_write_data
+0     22   2   1   115  1.7  SPI_write_strobe
+0     44   4   6   322  6.9  SPI_write_burst
+ Inline        0   102  1.7  SPI_reset_cc11
+ Inline        0    86  1.3  SPI_powerup_reset
+0     38   3   3   265  3.5  Write_packet
+ Inline        0  1450  2.0  writeRfSettings
+ Inline        0             @cinit1
+
+Program metrics:
+    Functions               13
+    Statements              257
+    Comments                477
+    Volume (V)              9392
+    Difficulty (D)          55.0
+    Effort to implement (E) 517010
+    Time to implement (T)   7 hours, 59 minutes
+    Est Delivered Bugs (B)  2
+    Cyclomatic Complexity   14
+    Maintainability (MI)    90
+
+ Segment     Used  Free
+-----------  ----  ----
+00000-00002     3  0  
+00003-007FF  1121  924  
+00800-00FFF     0  2048  
+
+
+

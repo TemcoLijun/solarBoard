@@ -1,0 +1,194 @@
+004-005 @READ_PROGRAM_MEMORY8.P1
+004-005 @READ_PACKED_MEMORY.P2
+004     @WRITE_PROGRAM_MEMORY8.P3
+004-005 @WRITE_PACKED_MEMORY.P4
+006-007 @READ_PACKED_MEMORY.P1
+006-007 @WRITE_PACKED_MEMORY.P2
+00B     INTCON
+00B.2   TMR0IF
+00B.5   TMR0IE
+00B.6   PEIE
+00B.7   GIE
+018.0   TMR1ON
+018     T1CON
+018.2   T1SYNC
+018.3   T1OSCEN
+018.4   T1CKPS0
+018.5   T1CKPS1
+018.6   TMR1CS0
+018.7   TMR1CS1
+019     T1GCON
+019.7   TMR1GE
+01E     CPSCON0
+01E.0   CPSCH0
+01E.0   T0XCS
+01E.1   CPSCH1
+01E.1   CPSOUT
+01E.2   CPSCH2
+01E.2   CPSRNG0
+01E.3   CPSCH3
+01E.3   CPSRNG1
+01E.6   CPSRM
+01E.7   CPSON
+01F     CPSCON1
+020-027 Rbuffer
+028-02D Wbuffer
+02E-035 PA_config
+036     leng
+037-038 data_sum
+039-03A temp_buf
+03B-03C caliberate_temp
+03D-05F rfSettings
+060     main.read_count
+061     main.Rval
+062-063 Write_packet.Wbuffer
+062     @delay_ms1.P1
+062     Temp_filter_reading.type
+062     main.@SCRATCH1
+063-064 Temp_filter_reading.temp_read
+063     main.@SCRATCH2
+064     Write_packet.size
+064-065 look_up_table.count
+065     SPI_write_data.Regaddr
+065     SPI_write_burst.Regaddr
+065-066 Temp_filter_reading.min
+065     SPI_write_strobe.strobe
+066-067 look_up_table.val
+066     SPI_write_data.Dvalue
+066-067 SPI_write_burst.Wbuf
+067-068 Temp_filter_reading.max
+068-069 look_up_table.work_var
+068     SPI_write_burst.count
+069-06A Temp_filter_reading.temp_ai
+069     SPI_write_burst.i
+06A-06B look_up_table.index
+06A     SPI_write_burst.@SCRATCH1
+06B     Temp_filter_reading.sampling_counter
+06B     SPI_write_byte.Wdata
+06C     SPI_write_byte.i
+06C     Temp_filter_reading.@SCRATCH1
+06C     look_up_table.@SCRATCH1
+06D     Temp_filter_reading.@SCRATCH2
+06D     look_up_table.@SCRATCH2
+06E-06F,0A0-09F @DIV1616.P1
+06E-06F,0A0-09F @MUL1616.P2
+077     @SCRATCH
+078     @SCRATCH
+078     _RETURN_
+079     @SCRATCH
+07A     @SCRATCH
+08C     TRISA
+08C.2   TRISA2
+08E     TRISC
+095.0   PS0
+095     OPTION_REG
+095.1   PS1
+095.2   PS2
+095.3   PSA
+095.4   TMR0SE
+095.5   TMR0CS
+0A0-0A1 @DIV1616.P1
+0A0-0A1 @MUL1616.P2
+0A2     @DIV1616.@SCRATCH1
+0A2     @MUL1616.@SCRATCH1
+111.6   C1OUT
+113.6   C2OUT
+117     FVRCON
+117.2   CDAFVR0
+117.3   CDAFVR1
+117.7   FVREN
+118.0   DACNSS
+118     DACCON0
+118.2   DACPSS0
+118.3   DACPSS1
+118.5   DACOE
+118.7   DACEN
+119.0   DACR0
+119     DACCON1
+119.1   DACR1
+119.2   DACR2
+119.3   DACR3
+119.4   DACR4
+18C.0   ANSA0
+18C     ANSELA
+18C.1   ANSA1
+18C.2   ANSA2
+18C.4   ANSA4
+18E.0   ANSC0
+18E     ANSELC
+18E.1   ANSC1
+18E.2   ANSC2
+18E.3   ANSC3
+191-192 @WRITE_PROGRAM_MEMORY8.P1
+191-192 @READ_PROGRAM_MEMORY8.P2
+291     CCP_1_LOW
+291     CCP_1
+292     CCP_1_HIGH
+298     CCP_2
+298     CCP_2_LOW
+299     CCP_2_HIGH
+311     CCP_3_LOW
+311     CCP_3
+312     CCP_3_HIGH
+318     CCP_4_LOW
+318     CCP_4
+319     CCP_4_HIGH
+
+ROM Allocation:
+002C  @delay_ms1
+0003  temp_table
+03AD  main
+021B  Temp_filter_reading
+01F2  @DIV1616
+02B2  look_up_table
+0297  @MUL1616
+00C0  initial
+0042  SPI_write_byte
+00F6  SPI_initial
+0062  SPI_write_data
+00AA  SPI_write_strobe
+007E  SPI_write_burst
+0118  SPI_reset_cc11
+0106  SPI_powerup_reset
+0387  Write_packet
+012E  writeRfSettings
+03AD  @cinit1
+03BF  @cinit2
+
+
+User Memory space: 
+
+User Memory space: 
+
+Project Directory:
+    E:\SPI_CODE\
+
+Project Files:
+    piccore.c                                               [18-七月-13 11:28  CRC=5C54D920]
+    pic.h                                                   [20-六月-13 21:06  CRC=DE63348E]
+    C:\Program Files\PICC\devices\16F1824.h                 [01-十二月-11 14:35  CRC=7603519E]
+
+Source signature=26BEB0EA
+
+Units:
+    piccore (main)
+
+Compiler Settings:
+    Processor:      PIC16F1824
+    Pointer Size:   16
+    ADC Range:      0-1023
+    Opt Level:      9
+    Short,Int,Long: UNSIGNED: 1,8,16
+    Float,Double:   32,32
+    Enhanced 16:    Yes
+
+Output Files:
+    Errors:      piccore.err
+    Ext Symbols: piccore.esym
+    INHX8:       piccore.hex
+    Symbols:     piccore.sym
+    List:        piccore.lst
+    Debug/COFF:  piccore.cof
+    Project:     piccore.PJT
+    Call Tree:   piccore.tre
+    Statistics:  piccore.STA

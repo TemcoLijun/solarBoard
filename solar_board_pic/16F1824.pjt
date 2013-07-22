@@ -1,0 +1,53 @@
+[Directories]
+Include=C:\Program Files\PICC\devices\;C:\Program Files\PICC\drivers\;
+Library=
+LinkerScript=
+[defines]
+enabled=0
+D1=
+V1=
+[fileformats]
+forcecoff=0
+debug=4
+error=2
+object=0
+list=0
+scratch=0
+sta=1
+tre=1
+allerrors=1
+allwarnings=1
+stayupne=3
+stayupoe=0
+[PROJECT]
+Target=16F1824.hex
+Development_Mode=
+Processor=0x1824
+Processor_Text=PIC16F1824
+ToolSuite=CCS
+[Target Data]
+BuildTool=C-COMPILER
+OptionString=+FM
+AdditionalOptionString=
+BuildRequired=1
+FileList=D:\SPI_CODE\16F1824.c
+[Opened Files]
+1=16F1824.h
+2=
+3=pic.h
+4=16F1824.h
+5=
+[16F1824.h.c]
+Type=4
+Path=
+FileList=
+BuildTool=
+OptionString=
+AdditionalOptionString=
+[mru-list]
+1=D:\SPI_CODE\16F1824.h.c
+[Windows]
+0=0000 %S 0 0 796 451 3 0
+[Units]
+Count=1
+1=16F1824 (main)

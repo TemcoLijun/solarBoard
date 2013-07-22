@@ -1,0 +1,118 @@
+004     @WRITE_PROGRAM_MEMORY8.P1
+004-005 @READ_PROGRAM_MEMORY8.P2
+015     CCP_1_LOW
+015     CCP_1
+016     CCP_1_HIGH
+01B     CCP_2
+01B     CCP_2_LOW
+01C     CCP_2_HIGH
+020     @TRIS_C
+021-028 Rbuffer
+029-02A Wbuffer
+02B-032 PA_config
+033-055 rfSettings
+056     main.Rval
+057     main.read_count
+058     main.leng
+059-05A Read_packet.Rbuffer
+059     SPI_write_burst.Regaddr
+059-05A writeRfSettings.pRfSettings
+05A-05B SPI_write_burst.Wbuf
+05B-05C Read_packet.count
+05B     writeRfSettings.@SCRATCH1
+05C     SPI_write_data.Regaddr
+05C     SPI_write_burst.count
+05D     SPI_write_data.data
+05D-05E Read_packet.state
+05D     SPI_write_burst.i
+05E     SPI_write_data.@SCRATCH1
+05E     SPI_write_burst.@SCRATCH1
+05F     Read_packet.size
+060     Read_packet.i
+061     SPI_read_data.Regaddr
+061     @delay_ms1.P1
+061     SPI_read_burst.Regaddr
+061     SPI_read_status.Regaddr
+061     SPI_write_strobe.strobe
+061     Read_packet.@SCRATCH1
+062     SPI_read_data.data
+062     SPI_read_status.stat
+062-063 SPI_read_burst.Rbuf
+062     Read_packet.@SCRATCH2
+063     SPI_read_data.@SCRATCH1
+063     SPI_read_status.@SCRATCH1
+064     SPI_read_burst.count
+065     SPI_read_burst.i
+066     SPI_read_burst.@SCRATCH1
+067     SPI_write_byte.Wdata
+067     SPI_read_burst.@SCRATCH2
+068     SPI_read_byte.i
+068     SPI_write_byte.i
+069     SPI_read_byte.Rdata
+06A     SPI_read_byte.@SCRATCH1
+077     @SCRATCH
+078     @SCRATCH
+078     _RETURN_
+079     @SCRATCH
+07A     @SCRATCH
+107.6   C1OUT
+108.6   C2OUT
+10D-10E @WRITE_PROGRAM_MEMORY8.P1
+10D-10E @READ_PROGRAM_MEMORY8.P2
+
+ROM Allocation:
+0004  @delay_ms1
+03E9  main
+0074  initial
+0082  SPI_initial
+0018  SPI_write_byte
+02D0  SPI_read_byte
+003F  SPI_write_data
+0387  SPI_read_data
+02FF  SPI_read_status
+005C  SPI_write_strobe
+0290  SPI_write_burst
+031F  SPI_read_burst
+00A9  SPI_reset_cc11
+0097  SPI_powerup_reset
+00C4  writeRfSettings
+0352  Read_packet
+03E9  @cinit1
+0403  @cinit2
+
+
+User Memory space: 
+
+User Memory space: 
+
+Project Directory:
+    D:\spi\
+
+Project Files:
+    piccore.c                                               [07-六月-13 16:42  CRC=88512AB2]
+    pic.h                                                   [07-六月-13 16:55  CRC=4769F609]
+    C:\Program Files\PICC\devices\16F882.h                  [01-十二月-11 14:35  CRC=A6A31F01]
+
+Source signature=1D015EBD
+
+Units:
+    piccore (main)
+
+Compiler Settings:
+    Processor:      PIC16F882
+    Pointer Size:   16
+    ADC Range:      0-1023
+    Opt Level:      9
+    Short,Int,Long: UNSIGNED: 1,8,16
+    Float,Double:   32,32
+
+Output Files:
+    Errors:      piccore.err
+    Ext Symbols: piccore.esym
+    INHX8:       piccore.hex
+    Symbols:     piccore.sym
+    List:        piccore.lst
+    Debug/COFF:  piccore.cof
+    Project:     piccore.PJT
+    Call Tree:   piccore.tre
+    Statistics:  piccore.STA

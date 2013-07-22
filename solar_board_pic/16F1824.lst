@@ -1,0 +1,40 @@
+CCS PCM C Compiler, Version 4.128, 64281               02-ÎåÔÂ-13 16:24
+
+               Filename: D:\SPI_CODE\16F1824.lst
+
+               ROM used: 16 words (0%)
+                         Largest free fragment is 2048
+               RAM used: 4 (2%) at main() level
+                         15 (6%) worst case
+               Stack:    0 locations
+
+*
+0000:  MOVLP  00
+0001:  GOTO   003
+0002:  NOP
+.................... #include <16F1824.h> 
+.................... //////// Standard Header file for the PIC16F1824 device //////////////// 
+.................... #device PIC16F1824 
+.................... #list 
+....................  
+....................  
+.................... void main() { 
+0003:  CLRF   05
+0004:  CLRF   04
+0005:  MOVLW  1F
+0006:  ANDWF  03,F
+0007:  MOVLB  03
+0008:  CLRF   0C
+0009:  CLRF   0E
+000A:  MOVLB  02
+000B:  CLRF   12
+000C:  CLRF   11
+000D:  CLRF   14
+000E:  CLRF   13
+....................  
+.................... } 
+000F:  SLEEP
+
+Configuration Fuses:
+   Word  1: 3FC7   ECH NOWDT PUT MCLR NOPROTECT NOCPD BROWNOUT NOCLKOUT IESO FCMEN
+   Word  2: 1FFF   NOWRT PLL STVREN BORV19 NODEBUG NOLVP

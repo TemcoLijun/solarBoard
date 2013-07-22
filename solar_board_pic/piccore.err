@@ -1,0 +1,4 @@
+>>> Warning 202 "E:\SPI_CODE\pic.h" Line 313(24,34): Variable never used:   rfSettings
+>>> Warning 202 "piccore.c" Line 53(18,22): Variable never used:   Rval
+      Memory usage:   ROM=27%      RAM=28% - 38%
+      0 Errors,  2 Warnings.

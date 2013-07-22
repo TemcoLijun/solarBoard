@@ -1,0 +1,41 @@
+[PROJECT]
+Target=piccore.HEX
+Development_Mode=2
+Processor=0x882F
+Processor_Text=PIC16F882
+ToolSuite=CCS
+
+[Directories]
+Include=
+Library=
+LinkerScript=
+
+[Target Data]
+FileList=D:\spi\piccore.c
+BuildTool=C-COMPILER
+OptionString=+FM
+AdditionalOptionString=
+BuildRequired=1
+
+[piccore.c]
+Type=4
+Path=
+FileList=
+BuildTool=
+OptionString=
+AdditionalOptionString=
+
+[mru-list]
+1=piccore.c
+
+[Windows]
+0=0000 piccore.c 0 0 796 451 3 0
+
+[Opened Files]
+1=piccore.c
+2=pic.h
+3=C:\Program Files\PICC\devices\16F882.h
+4=
+[Units]
+Count=1
+1=piccore (main)
