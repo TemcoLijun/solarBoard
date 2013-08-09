@@ -51,33 +51,45 @@ void main( void )
 {  
    unsigned char  read_count ;//= 64;
    unsigned char Rval;
+   unsigned char i;
    initial(); 
  //  output_high( SDA );
    //DISABLE_INTERRUPTS (INT_TIMER0) ;
    delay_ms(10);
+      
    while(1)
    {  
       temp_buf = look_up_table(Temp_filter_reading( temp_type ));
-      Wbuffer[0] = temp_buf + caliberate_temp; //we have not make caliberate at here.
-      Wbuffer[1] = Temp_filter_reading( PIR_type );
-      Wbuffer[2] = Temp_filter_reading( light_type );
+      Sbuffer[0] = temp_buf + caliberate_temp; //we have not make caliberate at here.
+      Sbuffer[1] = Temp_filter_reading( PIR_type );
+      Sbuffer[2] = 500;//Temp_filter_reading( light_type );
+      
+      for(i=0;i<3;i++)
+      {
+         Wbuffer[2*i] = (unsigned char)(Sbuffer[i]>>8) ;
+         Wbuffer[2*i+1] = (unsigned char)Sbuffer[i]%256;
+      }
+      
    #if 1
      //write the data into the FIFO buffer    
      if( 1 )//WR_flg )
      {
+      if( Sbuffer[1] > 250)
+         output_high( LED_RED );
    //   output_high( LED_RED );
-   //   output_high( LED_RED );
-        delay_ms( 30 ); 
-      leng = 2;
+      delay_ms( 100 ); 
+      leng = 6;
       Write_packet( Wbuffer, leng );
    //   output_low( LED_RED );
-      if( Wbuffer[1] > 250)
+   /*   if( Wbuffer[1] > 250)
       {
          output_high( LED_RED );
          delay_ms(200);
          output_low( LED_RED);
-      }
-      delay_ms( 30 );
+      }*/
+      delay_ms( 300 );
+      output_low( LED_RED);
+    //  Sbuffer[0]++;
       }
     
      else    //read the data from the FIFO buffer
@@ -160,11 +172,13 @@ void main( void )
 unsigned INT16 Temp_filter_reading( unsigned char type )
 {
    unsigned int16 temp_read,min,max;
-   unsigned int16 temp_ai;
+   unsigned int16 temp_ai = 0;
    unsigned char sampling_counter;
-   DISABLE_INTERRUPTS (INT_TIMER0) ;
+ //  DISABLE_INTERRUPTS (INT_TIMER0) ;
    data_sum = 0;
    set_adc_channel( type ); //we open this channel for read the temp value
+ //  temp_ai = read_adc(ADC_START_AND_READ);
+   
    for(sampling_counter = 0; sampling_counter < sampling_time; sampling_counter++ )
    {
       temp_read = read_adc();
@@ -185,6 +199,7 @@ unsigned INT16 Temp_filter_reading( unsigned char type )
    enable_interrupts (INT_TIMER0);
    sampling_counter = 0;
    temp_ai = (unsigned int16)temp_read&0x3ff;
+   
    return temp_ai ;
 }
 //when we get the adc value that we need caculate it and turn ever the TEMP

@@ -222,7 +222,8 @@
 /////////////////////PARAMETER RF////////////////////
 
 unsigned char Rbuffer[ data_len ] = {0};
-int16 Wbuffer[ 3 ] = {0}; //we defined 3 number in array,0 for temp,1 for pir,2 for light
+unsigned char Wbuffer[ 6 ] = {0}; 
+unsigned int16 Sbuffer[3] = {0};//we defined 3 number in array,0 for temp,1 for pir,2 for light
 unsigned char PA_config[8] = {0xC0,0xC0,0xC0,0xC0,0xC0,0xC0,0xC0,0xC0};
 unsigned char leng;
 
